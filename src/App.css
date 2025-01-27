@@ -1,0 +1,154 @@
+#root {
+  margin: 0;
+}
+
+body {
+  margin: 0 !important;
+}
+
+html, body {
+  scroll-behavior: smooth;
+}
+
+/* .chat-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 20px auto;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+} */
+
+.input-field, .send-button {
+  margin-bottom: 10px;
+}
+
+.input-field {
+  width: calc(100% - 122px);
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.send-button {
+  width: 100px;
+  padding: 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.send-button:hover {
+  background-color: #45a049;
+}
+
+.agents-container {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+}
+
+/* .chat-window {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0 5px;
+}
+
+.chat-header {
+  padding: 5px 0;
+  font-size: 16px;
+  font-weight: bold;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 10px;
+}
+
+.chat-messages {
+  height: 400px;
+  overflow-y: auto;
+}
+
+.chat-box {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+} */
+
+/* .message-content {
+  background-color: #f1f1f1;
+  border-radius: 10px;
+  padding: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+} */
+
+.chat-message-left .message-content {
+  background-color: #e6f7ff;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+.chat-message-right .message-content {
+  background-color: #fff1f0;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+.chat-message-center .message-content {
+  background-color: #f9f0ff;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+.chat-message-final .message-content {
+  background-color: #8fc1ff;
+  height: 300px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+
+.copy-button {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  position: relative;
+  top: 10px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-left: auto; /* This will push the button to the right */
+}
+
+.copy-button:hover {
+  background: #f0f0f0;
+}
+
+.icon-sm {
+  width: 16px;
+  height: 16px;
+}
+/* styles.css or FullPageLoader.module.css */
+.full-page-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8); /* Light overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Ensure it's above other elements */
+}
