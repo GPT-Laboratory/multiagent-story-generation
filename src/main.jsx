@@ -5,6 +5,8 @@ import App from "./App";
 import EditItem from "./EditItem";
 import Layout from "./Layout";
 import "./App.css";
+import AddItem from "./AddItem";
+import { addKeyToResponse } from "./utilityFunctions";
 
 const Root = () => {
   const [result1, setResult1] = useState([]);
@@ -15,6 +17,19 @@ const Root = () => {
         item.key === updatedItem.key ? updatedItem : item
       )
     );
+  };
+
+  // const handleAddItem = (newItem) => {
+  //   setResult1((prevResult) => [...prevResult, newItem]);
+  // };
+
+  const handleAddItem = (newItem) => {
+    setResult1((prevResult) => {
+      const updatedResult = [...prevResult, newItem];
+      const responseDataWithKeys = addKeyToResponse(updatedResult);
+      console.log("Updated result with keys: ", responseDataWithKeys);
+      return responseDataWithKeys;
+    });
   };
 
   return (
@@ -34,6 +49,16 @@ const Root = () => {
             </Layout>
           }
         />
+
+        <Route
+          path="/add"
+          element={
+            <Layout>
+              <AddItem onUpdate={handleAddItem} />
+            </Layout>
+          }
+        />
+        
       </Routes>
     </Router>
   );

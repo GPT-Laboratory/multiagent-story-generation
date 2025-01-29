@@ -72,9 +72,11 @@ async def websocket_endpoint(websocket: WebSocket):
             if request_id:
                 # Store the WebSocket connection with the given request_id
                 websocket_connections[request_id] = websocket
-                await websocket.send_json({"message": f"WebSocket connected for request {request_id}"})
+                await websocket.send_json({"connection_message": f"WebSocket connected for request {request_id}"})
             if "stories" in data and "prioritization_type" in data and "model" in data:
                 stories = data.get("stories")
+                vision = data.get("visions")
+                mvp = data.get('mvps')               
                 model = data.get("model")
                 client_feedback = data.get("feedback")
                 prioritization_type = data.get("prioritization_type").upper()  # Normalize to uppercase
@@ -83,13 +85,20 @@ async def websocket_endpoint(websocket: WebSocket):
                 product_owner_data = selected_panels.get("productOwner")
                 solution_architect_data = selected_panels.get("solutionArchitect")
                 developer_data = selected_panels.get("developer")
+                selected_weights = data.get("selected_weights", {})
+                po_weight = selected_weights.get("po")
+                sa_weight = selected_weights.get("sa")
+                dev_weight = selected_weights.get("dev")
                 finalPrioritization = data.get("finalPrioritization")
-
+                print(f"po_weight: {po_weight}")
+                print(f"sa_weight: {sa_weight}")
+                print(f"dev_weight: {dev_weight}")
+                print(f"client_feedback: {client_feedback}")
 
                 if finalPrioritization is not True:
                     # Handle the original sendInput function's workflow
                     await run_agents_workflow(
-                        stories, prioritization_type, model, client_feedback, websocket
+                        stories,vision, mvp, prioritization_type, model, client_feedback, websocket
                     )
                 else:
                     # Handle the new sendInputData function's workflow
@@ -101,6 +110,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         product_owner_data,
                         solution_architect_data,
                         developer_data,
+                        po_weight,
+                        sa_weight,
+                        dev_weight,
                     )
                 # await run_agents_workflow(stories, prioritization_type, model, client_feedback, websocket)
     except WebSocketDisconnect:
@@ -111,10 +123,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # client_feedback=""
-async def run_agents_workflow(stories, prioritization_type, model, client_feedback, websocket):
+async def run_agents_workflow(stories, vision, mvp, prioritization_type, model, client_feedback, websocket):
    
     # Step 1: Greetings
-    greetings_prompt = construct_product_owner_prompt({"stories": stories}, client_feedback )
+    greetings_prompt = construct_product_owner_prompt({"stories": stories}, vision, mvp, client_feedback )
 
 
     greetings_response = await engage_agents(greetings_prompt, websocket, "PO", model)
@@ -170,14 +182,14 @@ async def run_agents_workflow(stories, prioritization_type, model, client_feedba
         #await websocket.send_json({"agentType": "error", "message": "Error parsing greetings response. Please try again later."})
 
      # Step 2: Topic Introduction
-    topic_prompt = construct_senior_developer_prompt({"stories": stories}, client_feedback )    #logger.info(f"topic_prompt : {topic_prompt}")
+    topic_prompt = construct_senior_developer_prompt({"stories": stories}, vision, mvp, client_feedback )    #logger.info(f"topic_prompt : {topic_prompt}")
     
     # Step 3: Context and Discussion
-    context_prompt = construct_solution_architect_prompt({"stories": stories}, client_feedback ) 
+    context_prompt = construct_solution_architect_prompt({"stories": stories}, vision, mvp, client_feedback ) 
     
     # Run Step 2 and Step 3 concurrently
     topic_response, context_response = await asyncio.gather(
-        engage_agents(topic_prompt, websocket, "SA", model),
+        engage_agents(topic_prompt, websocket, "Solution Architect", model),
         engage_agents(context_prompt, websocket, "developer", model)
     )
 
@@ -297,7 +309,7 @@ async def engage_all_agents_in_prioritization(prompt, stories, websocket, model,
     raise Exception("Failed to get valid response from agents after multiple attempts")
 
 
-async def prioritize_stories_with_weightage(stories, product_owner_data, solution_architect_data, developer_data):
+async def prioritize_stories_with_weightage(stories, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight):
     # Format the input data for OpenAI API
     formatted_product_owner_data = '\n'.join([f"- {story}" for story in product_owner_data])
     formatted_solution_architect_data = '\n'.join([f"- {story}" for story in solution_architect_data])
@@ -306,20 +318,20 @@ async def prioritize_stories_with_weightage(stories, product_owner_data, solutio
     prompt = (
     "You are an expert at prioritizing tasks. Your goal is to distribute 100 dollars across user stories to reflect their priority. "
     "The prioritization is based on input from three roles:\n"
-    "- Product Owner (50% weight): Focused on business and client needs.\n"
-    "- Solution Architect (25% weight): Focused on technical feasibility and architecture.\n"
-    "- Developer (25% weight): Focused on implementation complexity and development aspects.\n\n"
+    f"- Product Owner {po_weight}%: Focused on business and client needs.\n"
+    f"- Solution Architect {sa_weight}%: Focused on technical feasibility and architecture.\n"
+    f"- Developer {dev_weight}%: Focused on implementation complexity and development aspects.\n\n"
     "Here are the user stories:\n"
     + '\n'.join([f"- Story ID {index + 1}: {story['user_story']} {story['epic']} {story['description']}" for index, story in enumerate(stories)])
     + "\n\n"
     "Each role has provided their input:\n\n"
-    f"Product Owner's perspective (50% weight):\n{formatted_product_owner_data}\n\n"
-    f"Solution Architect's input (25% weight):\n{formatted_solution_architect_data}\n\n"
-    f"Developer's feedback (25% weight):\n{formatted_developer_data}\n\n"
+    f"Product Owner's perspective {po_weight}%:\n{formatted_product_owner_data}\n\n"
+    f"Solution Architect's input {sa_weight}%:\n{formatted_solution_architect_data}\n\n"
+    f"Developer's feedback {dev_weight}%:\n{formatted_developer_data}\n\n"
     "Distribute 100 dollars across all stories based on the input, adhering strictly to the following weights:\n"
-    "- Product Owner: 50% influence\n"
-    "- Solution Architect: 25% influence\n"
-    "- Developer: 25% influence\n\n"
+    f"- Product Owner: {po_weight}% influence\n"
+    f"- Solution Architect: {sa_weight}% influence\n"
+    f"- Developer: {dev_weight}% influence\n\n"
     "Focus more on the Product Owner's perspective while proportionally considering the inputs of the Solution Architect and Developer. "
     "Ensure the sum of all dollar allocations equals exactly 100.\n\n"
     "Return the prioritized stories in this format:\n"
@@ -327,7 +339,6 @@ async def prioritize_stories_with_weightage(stories, product_owner_data, solutio
     "- Story ID Z: dollars W\n\n"
     "The number of prioritized stories and the total dollar allocation must match the number of input stories and 100 dollars, respectively."
 )
-
 
     return prompt
     # # Parse the response (ensure the output is well-structured and matches the input story count)
@@ -402,11 +413,11 @@ async def engage_agents_in_prioritization(prompt, stories, websocket, model, max
 #     await websocket.send_json({"agentType": "Final_output_into_table", "message": prioritized_stories, "prioritization_type": prioritization_type})
 
 async def handle_final_prioritization_workflow(
-    stories, prioritization_type, model, websocket, product_owner_data, solution_architect_data, developer_data
+    stories, prioritization_type, model, websocket, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight
 ):
     # Weighted prioritization
     prioritize_weight_prompt = await prioritize_stories_with_weightage(
-        stories, product_owner_data, solution_architect_data, developer_data
+        stories, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight
     )
 
     prioritized_stories = await engage_agents_in_prioritization(prioritize_weight_prompt, stories, websocket, model)  # Assuming `engage_agents_in_prioritization` interacts with OpenAI API
@@ -446,6 +457,8 @@ async def stream_response_as_complete_message(websocket: WebSocket, response: st
 async def catch_all(request):
     return FileResponse(os.path.join('dist', 'index.html'))
 
+
+
 # async def generate_user_stories(request: Request):
 #     data = await request.json()
 #     headers = {
@@ -455,15 +468,55 @@ async def catch_all(request):
 
 #     if not data or 'vision' not in data or 'model' not in data:
 #         return JSONResponse({'error': 'Missing required data: vision, and model'}, status_code=400)
+
 #     model = data['model']
 #     vision = data['vision']
-#     mvp = data['mvp']   
-#     glossary = data['glossary'] 
+#     mvp = data['mvp']
+#     glossary = data['glossary']
 #     user_analysis = data['user_analysis']
-#     print(f"glossary: {glossary}")
-#     print(f"user_analysis: {user_analysis}")
-#     stories_with_epics = generate_user_stories_with_epics(vision, mvp, glossary, user_analysis, model,headers)
-#     return JSONResponse({"stories_with_epics": stories_with_epics})
+#     feedback = data['feedback']
+#     request_id = data.get("request_id")
+
+#     print(f"feedback: {feedback}")
+
+#     # Define the roles in sequence
+#     roles = ["PO", "SA", "Security", "Compliance"]
+
+#     # Initial input to the first role (PO) is based on the original data
+#     input_content = {
+#         "vision": vision,
+#         "mvp": mvp,
+#         "glossary": glossary,
+#         "user_analysis": user_analysis,
+#         "previous_response": None  # No previous response for the first model
+#     }
+
+#     websocket = websocket_connections.get(request_id)
+
+#     if not websocket:
+#         print(f"No WebSocket connection found for request_id: {request_id}")
+#     else:
+#         print(f"WebSocket connection found for request_id: {request_id}")
+
+#     response = process_role(input_content, model, headers)
+    
+#     # # Sequentially process each role
+#     # for role in roles:
+#     #     # if websocket:
+#     #     # await websocket.send_json({"message": f"Processing role: {role}"})
+#     #     print(f"Processing role: {role}")
+#     #     response = process_role(input_content, model, headers, role)
+#     #     # if websocket:
+#     #     #     await websocket.send_json({"message": f"Completed processing role: {role}"})
+#     #     input_content["previous_response"] = response  # Update input for the next role
+        
+
+#     # Parse the final response (from Compliance)
+#     final_response = parse_user_stories(response)
+
+#     # The last role's response is returned
+#     return JSONResponse({"final_response": final_response})
+
 
 async def generate_user_stories(request: Request):
     data = await request.json()
@@ -509,7 +562,7 @@ async def generate_user_stories(request: Request):
         # if websocket:
         # await websocket.send_json({"message": f"Processing role: {role}"})
         print(f"Processing role: {role}")
-        response = process_role(input_content, model, headers, role)
+        response = process_role(input_content, model, headers, role, feedback)
         # if websocket:
         #     await websocket.send_json({"message": f"Completed processing role: {role}"})
         input_content["previous_response"] = response  # Update input for the next role
@@ -520,53 +573,6 @@ async def generate_user_stories(request: Request):
 
     # The last role's response is returned
     return JSONResponse({"final_response": final_response})
-
-# OPENAI_API_KEY = os.getenv("API-KEY1")
-# LLAMA_API_KEY = os.getenv("LLAMA-key1")
-# OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-# LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
-
-# async def generate_user_stories(request: Request):
-#     data = await request.json()
-#     headers = {
-#         "Authorization": f"Bearer {random.choice([LLAMA_API_KEY, OPENAI_API_KEY])}",
-#         "Content-Type": "application/json"
-#     }
-
-#     # Input validation
-#     if not data or 'vision' not in data or 'model' not in data:
-#         return JSONResponse({'error': 'Missing required data: vision, and model'}, status_code=400)
-
-#     # Extract data from request
-#     model = data['model']
-#     vision = data['vision']
-#     mvp = data.get('mvp', '')
-#     glossary = data.get('glossary', '')
-#     user_analysis = data.get('user_analysis', '')
-
-#     # Define roles for the sequential CoT process
-#     roles = ["PO", "QA", "Security", "Compliance"]
-
-#     # Initial input to the first role
-#     input_content = {
-#         "vision": vision,
-#         "mvp": mvp,
-#         "glossary": glossary,
-#         "user_analysis": user_analysis,
-#         "previous_response": None  # Start without previous context
-#     }
-
-#     # Sequential processing through roles
-#     for role in roles:
-#         print(f"Processing role: {role}")
-#         input_content["previous_response"] = process_role(input_content, model, headers, role)
-
-#     # Parse the final response (from Compliance)
-#     final_response = parse_user_stories(input_content["previous_response"])
-
-#     return JSONResponse({"final_response": final_response})
-
-
 
 
 
@@ -679,4 +685,4 @@ app = Starlette(debug=True, middleware=[
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app,host='0.0.0.0',  port=8001, reload=True)
+    uvicorn.run(app,host='0.0.0.0', port=8001)

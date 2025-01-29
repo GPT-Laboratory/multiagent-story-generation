@@ -42,9 +42,13 @@ import { downloadCSV } from "./helper/DownloadFile";
 // import { getSocket } from "./SocketInstance";
 // const WS_URL = "ws://localhost:8000/api/ws-chat";
 import { socketURL } from "./SocketInstance.jsx";
+import AddItem from "./AddItem.jsx";
 const WS_URL = `${socketURL}/api/ws-chat`;
 
 const App = ({ result1, setResult1 }) => {
+
+
+	const [addNewItem, setAddNewItem] = useState(false);
 	const [requestId, setRequestId] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [displayChatBox, setDisplayChatBox] = useState(false);
@@ -80,9 +84,14 @@ const App = ({ result1, setResult1 }) => {
 	const [mvpFile, setMvpFile] = useState(null);
 	const location = useLocation();
 	const navigate = useNavigate();
+	const [percentages, setPercentages] = useState({
+		po: 50,
+		sa: 25,
+		dev: 25,
+	});
 	// const [fileInput, setFileInput] = useState({
 	//   vision: null,
-	//   mvp: null,
+	//   mvp: null, 
 	// });
 	const [finalTableData, setFinalTableData] = useState([]);
 	const [bestPORounds, setbestPORounds] = useState([]);
@@ -157,6 +166,30 @@ const App = ({ result1, setResult1 }) => {
 			},
 		}));
 	};
+
+	console.log(selectType);
+
+
+	const handleInputChange = (role, value) => {
+		const numericValue = parseInt(value, 10) || 0;
+		const otherRoles = ["po", "sa", "dev"].filter((r) => r !== role);
+
+		const otherTotal = percentages[otherRoles[0]] + percentages[otherRoles[1]];
+
+		if (numericValue <= 100 && numericValue >= 0) {
+			const remaining = 100 - numericValue;
+
+			const updatedPercentages = {
+				[otherRoles[0]]: Math.round((percentages[otherRoles[0]] / otherTotal) * remaining),
+				[otherRoles[1]]: Math.round((percentages[otherRoles[1]] / otherTotal) * remaining),
+				[role]: numericValue,
+			};
+
+			setPercentages(updatedPercentages);
+		}
+	};
+
+
 
 
 	useEffect(() => {
@@ -566,6 +599,11 @@ const App = ({ result1, setResult1 }) => {
 		navigate(`/edit/${record.key}`, { state: { item: record } });
 	};
 
+	const handleAdd = () => {
+		navigate(`/add`);
+	};
+	
+
 	// const handleUpdateItem = (updatedItem) => {
 	//   setResult1((prevResult) =>
 	//     prevResult.map((item) =>
@@ -576,14 +614,29 @@ const App = ({ result1, setResult1 }) => {
 	const sendInput = () => {
 		if (ws && ws.readyState === WebSocket.OPEN) {
 			// console.log("technique:", prioritizationTechnique);
-			ws.send(
-				JSON.stringify({
-					stories: result1,
-					model: selectModel,
-					prioritization_type: prioritizationTechnique,
-					feedback: feedback,
-				})
-			);
+
+
+			if (selectType === "input") {
+				ws.send(
+					JSON.stringify({
+						stories: result1,
+						visions: textBox.vision,
+						mvps: textBox.mvp,
+						model: selectModel,
+						prioritization_type: prioritizationTechnique,
+						feedback: feedback,
+					})
+				);
+			} else {
+				ws.send(
+					JSON.stringify({
+						stories: result1,
+						model: selectModel,
+						prioritization_type: prioritizationTechnique,
+						feedback: feedback,
+					})
+				);
+			}
 		}
 	};
 	const handleSubmit = async (e) => {
@@ -611,6 +664,11 @@ const App = ({ result1, setResult1 }) => {
 						productOwner: selectedInnerPanel.productOwner?.data || null,
 						solutionArchitect: selectedInnerPanel.solutionArchitect?.data || null,
 						developer: selectedInnerPanel.developer?.data || null,
+					},
+					selected_weights: {
+						po: percentages.po,
+						sa: percentages.sa,
+						dev: percentages.dev,
 					},
 					finalPrioritization: true
 					// feedback: feedback,
@@ -978,7 +1036,7 @@ const App = ({ result1, setResult1 }) => {
 						</Panel>
 					</Collapse>
 
-					<div style={{ display: 'flex', justifyContent: 'end', }}>
+					{/* <div style={{ display: 'flex', justifyContent: 'end', }}>
 						<Button
 							type="primary"
 							style={{ width: '16%', }}
@@ -988,7 +1046,58 @@ const App = ({ result1, setResult1 }) => {
 						>
 							Final Prioritization
 						</Button>
-					</div>
+					</div> */}
+
+					<Form
+						layout="vertical"
+
+						style={{ display: "flex", justifyContent: 'flex-end', alignItems: 'flex-end', gap: "10px", }}>
+						{/* <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}> */}
+
+						<Form.Item label="PO Weight" >
+							<Input
+								type="number"
+								value={percentages.po}
+								onChange={(e) => handleInputChange("po", e.target.value)}
+								style={{ width: "130px", marginLeft: "5px" }}
+							/>
+						</Form.Item>
+
+						<Form.Item label="Solution Architect Weight">
+
+
+							<Input
+								type="number"
+								value={percentages.sa}
+								onChange={(e) => handleInputChange("sa", e.target.value)}
+								style={{ width: "200px", marginLeft: "5px" }}
+							/>
+						</Form.Item>
+						<Form.Item label="Developer Weight">
+
+
+							<Input
+								type="number"
+								value={percentages.dev}
+								onChange={(e) => handleInputChange("dev", e.target.value)}
+								style={{ width: "150px", marginLeft: "5px" }}
+							/>
+						</Form.Item>
+						{/* </div> */}
+						<Form.Item  >
+
+							<Button
+								type="primary"
+
+								// onClick={() => console.log("Final Prioritization Clicked")}
+								onClick={handleFinalPrioritization}
+								disabled={isButtonDisabled}
+
+							>
+								Final Prioritization
+							</Button>
+						</Form.Item>
+					</Form>
 
 
 					{Object.entries(finalMessage).map(([agentType, messages]) => (
@@ -1068,263 +1177,275 @@ const App = ({ result1, setResult1 }) => {
 								scroll={{ x: 1200, y: 500 }}
 							/>
 							<div style={{ display: 'flex', justifyContent: 'end', }}>
-							<Button
-						type="primary"
-						style={{ width: '16%', marginTop: '20px' }}
-						// icon={<SearchOutlined />}
-						onClick={()=>downloadCSV(finalTableData)}
-						
-					>
-						Download Final Prioritization
-					</Button>
-					</div>
+								<Button
+									type="primary"
+									style={{ width: '16%', marginTop: '20px' }}
+									// icon={<SearchOutlined />}
+									onClick={() => downloadCSV(finalTableData)}
+
+								>
+									Download Final Prioritization
+								</Button>
+							</div>
 						</div>
 					)}
-					
+
 				</div>
 			</>
 		);
 	};
 
 	return (
-		<Layout>
-			<Header style={{ backgroundColor: "#f3fff3" }}>
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "row",
-						justifyContent: "space-between",
-						marginLeft: "0px",
-					}}>
-					<div>
-						<RQicon
-							width={"60px"}
-							height={"60px"}
-						/>
-					</div>
-					<div style={{ fontSize: "20px", color: "black" }}>
-						<strong>Multi-Agent GPT Prioritization Tool</strong>
-					</div>
-					<div></div>
-				</div>
-			</Header>
+		<>
+			{/* {addNewItem && (
+
+				<AddItem
+					onUpdate={result1}
+					isOpen={addNewItem}
+					onClose={() => setAddNewItem(false)}
+				/>
+			)
+
+			} */}
 			<Layout>
-				<Content>
-					{loading && <FullPageLoader />}
+				<Header style={{ backgroundColor: "#f3fff3" }}>
 					<div
-						id="mainContainer"
 						style={{
-							lineHeight: "0px",
 							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							overflowY: "auto",
-							height: "85vh",
-							paddingBottom: "30px",
+							flexDirection: "row",
+							justifyContent: "space-between",
+							marginLeft: "0px",
 						}}>
-						<Collapse
-							expandIcon={({ isActive }) => (
-								<CaretRightOutlined rotate={isActive ? 90 : 0} />
-							)}
-							accordion={false}
-							defaultActiveKey={["1"]}
+						<div>
+							<RQicon
+								width={"60px"}
+								height={"60px"}
+							/>
+						</div>
+						<div style={{ fontSize: "20px", color: "black" }}>
+							<strong>Multi-Agent GPT Prioritization Tool</strong>
+						</div>
+						<div></div>
+					</div>
+				</Header>
+				<Layout>
+					<Content>
+						{loading && <FullPageLoader />}
+						<div
+							id="mainContainer"
 							style={{
-								marginTop: "20px",
-								marginBottom: "16px",
-								width: "94vw",
+								lineHeight: "0px",
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								overflowY: "auto",
+								height: "85vh",
+								paddingBottom: "30px",
 							}}>
-							<Panel
-								header="Requirement Engineering Section"
-								key="1"
-								style={{}}>
-								<div
-									style={{
-										display: "flex",
-										widows: "78vw",
-										gap: "10px",
-										marginBottom: "6px",
-									}}>
+							<Collapse
+								expandIcon={({ isActive }) => (
+									<CaretRightOutlined rotate={isActive ? 90 : 0} />
+								)}
+								accordion={false}
+								defaultActiveKey={["1"]}
+								style={{
+									marginTop: "20px",
+									marginBottom: "16px",
+									width: "94vw",
+								}}>
+								<Panel
+									header="Requirement Engineering Section"
+									key="1"
+									style={{}}>
 									<div
 										style={{
-											width: "20%",
-											border: "1px solid #ccc",
-											paddingLeft: 15,
-
-											// paddingBottom: 15,
-											borderRadius: "10px",
-											marginBottom: 5,
+											display: "flex",
+											widows: "78vw",
+											gap: "10px",
+											marginBottom: "6px",
 										}}>
 										<div
 											style={{
-												paddingBottom: 10,
-											}}>
-											<h5 style={{ marginTop: "8px" }}> Select Type:</h5>
-											<div
-												style={{
-													marginTop: "-10px",
-												}}>
-												<input
-													type="checkbox"
-													checked={selectType === "input"}
-													onChange={() => setSelectType("input")}
-													style={{ marginRight: "10px", cursor: "pointer" }}
-													id="input"
-												/>
-												<label
-													htmlFor="input"
-													style={{ cursor: "pointer" }}>
-													Input Content
-												</label>
-											</div>
-											<br />
-											<div
-												style={{
-													marginTop: "-15px",
-												}}>
-												<input
-													type="checkbox"
-													checked={selectType === "file"}
-													onChange={() => setSelectType("file")}
-													style={{ marginRight: "10px", cursor: "pointer" }}
-													id="file"
-												/>
-												<label
-													htmlFor="file"
-													style={{ cursor: "pointer" }}>
-													User stories uplaod
-												</label>
-											</div>
-										</div>
-									</div>
-									{selectType === "input" && (
-										<div
-											style={{
-												width: "91vw",
+												width: "20%",
 												border: "1px solid #ccc",
 												paddingLeft: 15,
-												paddingRight: 15,
-												marginBottom: 5,
+
+												// paddingBottom: 15,
 												borderRadius: "10px",
+												marginBottom: 5,
 											}}>
-											<div>
-												<h5>
-													Hello, Enter your idea for generating user stories.
-												</h5>
+											<div
+												style={{
+													paddingBottom: 10,
+												}}>
+												<h5 style={{ marginTop: "8px" }}> Select Type:</h5>
 												<div
 													style={{
-														paddingBottom: 10,
-														display: "flex",
+														marginTop: "-10px",
 													}}>
-													{/* <h5 style={{ marginTop: "8px" }}> Select Type:</h5> */}
-													<div
-														style={{
-															marginRight: "10px",
-														}}>
-														<input
-															type="checkbox"
-															checked={type === "textbox"}
-															onChange={() => setType("textbox")}
-															style={{ marginRight: "10px", cursor: "pointer" }}
-															id="textbox"
-														/>
-														<label
-															htmlFor="textbox"
-															style={{ cursor: "pointer" }}>
-															Textboxs
-														</label>
-													</div>
-													<br />
-													<div
-													// style={{
-													//   marginTop: "-15px",
-													// }}
-													>
-														<input
-															type="checkbox"
-															checked={type === "vision_file"}
-															onChange={() => setType("vision_file")}
-															style={{ marginRight: "10px", cursor: "pointer" }}
-															id="vision_file"
-														/>
-														<label
-															htmlFor="vision_file"
-															style={{ cursor: "pointer" }}>
-															Upload files
-														</label>
-													</div>
+													<input
+														type="checkbox"
+														checked={selectType === "input"}
+														onChange={() => setSelectType("input")}
+														style={{ marginRight: "10px", cursor: "pointer" }}
+														id="input"
+													/>
+													<label
+														htmlFor="input"
+														style={{ cursor: "pointer" }}>
+														Input Content
+													</label>
+												</div>
+												<br />
+												<div
+													style={{
+														marginTop: "-15px",
+													}}>
+													<input
+														type="checkbox"
+														checked={selectType === "file"}
+														onChange={() => setSelectType("file")}
+														style={{ marginRight: "10px", cursor: "pointer" }}
+														id="file"
+													/>
+													<label
+														htmlFor="file"
+														style={{ cursor: "pointer" }}>
+														User stories uplaod
+													</label>
 												</div>
 											</div>
-											{type === "textbox" ? (
+										</div>
+
+										{selectType === "input" && (
+											<div
+												style={{
+													width: "91vw",
+													border: "1px solid #ccc",
+													paddingLeft: 15,
+													paddingRight: 15,
+													marginBottom: 5,
+													borderRadius: "10px",
+												}}>
 												<div>
-													<Form
-														layout="vertical"
+													<h5>
+														Hello, Enter your idea for generating user stories.
+													</h5>
+													<div
 														style={{
-															width: "100%",
+															paddingBottom: 10,
 															display: "flex",
-															alignItems: "center",
 														}}>
-														<Form.Item
-															label=" Vision Textbox"
-															style={{ flex: "1 1 70%", marginRight: "5px" }}>
-															<TextArea
-																rows={10}
-																placeholder="Enter your objective"
-																value={textBox.vision}
-																onChange={(e) =>
-																	setTextBox({
-																		...textBox,
-																		vision: e.target.value,
-																	})
-																}
-																style={{ color: "black" }}
+														{/* <h5 style={{ marginTop: "8px" }}> Select Type:</h5> */}
+														<div
+															style={{
+																marginRight: "10px",
+															}}>
+															<input
+																type="checkbox"
+																checked={type === "textbox"}
+																onChange={() => setType("textbox")}
+																style={{ marginRight: "10px", cursor: "pointer" }}
+																id="textbox"
 															/>
-														</Form.Item>
-														<Form.Item
-															label=" MVP Textbox"
-															style={{ flex: "1 1 70%", marginRight: "5px" }}>
-															<TextArea
-																rows={10}
-																placeholder="Enter your objective"
-																value={textBox.mvp}
-																onChange={(e) =>
-																	setTextBox({
-																		...textBox,
-																		mvp: e.target.value,
-																	})
-																}
-																style={{ color: "black" }}
+															<label
+																htmlFor="textbox"
+																style={{ cursor: "pointer" }}>
+																Textboxs
+															</label>
+														</div>
+														<br />
+														<div
+														// style={{
+														//   marginTop: "-15px",
+														// }}
+														>
+															<input
+																type="checkbox"
+																checked={type === "vision_file"}
+																onChange={() => setType("vision_file")}
+																style={{ marginRight: "10px", cursor: "pointer" }}
+																id="vision_file"
 															/>
-														</Form.Item>
-														<Form.Item
-															label="Select Model"
-															style={{ flex: "18%", marginRight: "5px" }}>
-															<Select
-																placeholder="Select Framework"
-																optionFilterProp="children"
-																onChange={handleModel}
-																value={selectModel}
-																defaultValue="gpt-3.5-turbo"
-																options={[
-																	{
-																		value: "gpt-3.5-turbo",
-																		label: "gpt-3.5",
-																	},
-																	{
-																		value: "gpt-4o",
-																		label: "gpt-4o",
-																	},
-																	{
-																		value: "llama3-70b-8192",
-																		label: "LLama3-70 Billion",
-																	},
-																	{
-																		value: "mixtral-8x7b-32768",
-																		label: "Mixtral-8x7b",
-																	},
-																]}
-															/>
-														</Form.Item>
-														{result1.length > 0 ? (
+															<label
+																htmlFor="vision_file"
+																style={{ cursor: "pointer" }}>
+																Upload files
+															</label>
+														</div>
+													</div>
+												</div>
+												{type === "textbox" ? (
+													<div>
+														<Form
+															layout="vertical"
+															style={{
+																width: "100%",
+																display: "flex",
+																alignItems: "center",
+															}}>
+															<Form.Item
+																label=" Vision Textbox"
+																style={{ flex: "1 1 70%", marginRight: "5px" }}>
+																<TextArea
+																	rows={10}
+																	placeholder="Enter your objective"
+																	value={textBox.vision}
+																	onChange={(e) =>
+																		setTextBox({
+																			...textBox,
+																			vision: e.target.value,
+																		})
+																	}
+																	style={{ color: "black" }}
+																/>
+															</Form.Item>
+															<Form.Item
+																label=" MVP Textbox"
+																style={{ flex: "1 1 70%", marginRight: "5px" }}>
+																<TextArea
+																	rows={10}
+																	placeholder="Enter your objective"
+																	value={textBox.mvp}
+																	onChange={(e) =>
+																		setTextBox({
+																			...textBox,
+																			mvp: e.target.value,
+																		})
+																	}
+																	style={{ color: "black" }}
+																/>
+															</Form.Item>
+															<Form.Item
+																label="Select Model"
+																style={{ flex: "18%", marginRight: "5px" }}>
+																<Select
+																	placeholder="Select Framework"
+																	optionFilterProp="children"
+																	onChange={handleModel}
+																	value={selectModel}
+																	defaultValue="gpt-3.5-turbo"
+																	options={[
+																		{
+																			value: "gpt-3.5-turbo",
+																			label: "gpt-3.5",
+																		},
+																		{
+																			value: "gpt-4o",
+																			label: "gpt-4o",
+																		},
+																		{
+																			value: "llama3-70b-8192",
+																			label: "LLama3-70 Billion",
+																		},
+																		{
+																			value: "mixtral-8x7b-32768",
+																			label: "Mixtral-8x7b",
+																		},
+																	]}
+																/>
+															</Form.Item>
+															{/* {result1.length > 0 ? (
 
 															<Form.Item style={{ marginTop: "30px" }}>
 																<Button
@@ -1343,155 +1464,174 @@ const App = ({ result1, setResult1 }) => {
 																	Generate
 																</Button>
 															</Form.Item>
-														)}
-													</Form>
+														)} */}
+															<Form.Item style={{ marginTop: "30px" }}>
+																<Button
+																	type="primary"
+																	icon={<SearchOutlined />}
+																	onClick={handleGenerateStories}>
+																	Generate
+																</Button>
+															</Form.Item>
+														</Form>
+														<div>
+															<Form
+																layout="vertical"
+																style={{
+																	width: "80%",
+																	display: "flex",
+																	alignItems: "center",
+																}}>
+																<Form.Item
+																	label=" Glossary Textbox"
+																	style={{ flex: "1 1 70%", marginRight: "5px" }}>
+																	<TextArea
+																		rows={10}
+																		placeholder="Enter your objective"
+																		value={textBox.glossary}
+																		onChange={(e) =>
+																			setTextBox({
+																				...textBox,
+																				glossary: e.target.value,
+																			})
+																		}
+																		style={{ color: "black" }}
+																	/>
+																</Form.Item>
+																<Form.Item
+																	label=" User analysis Textbox"
+																	style={{ flex: "1 1 70%", marginRight: "5px" }}>
+																	<TextArea
+																		rows={10}
+																		placeholder="Enter your objective"
+																		value={textBox.user_analysis}
+																		onChange={(e) =>
+																			setTextBox({
+																				...textBox,
+																				user_analysis: e.target.value,
+																			})
+																		}
+																		style={{ color: "black" }}
+																	/>
+																</Form.Item>
+															</Form>
+														</div>
+													</div>
+												) : (
 													<div>
 														<Form
 															layout="vertical"
 															style={{
-																width: "80%",
+																width: "100%",
 																display: "flex",
 																alignItems: "center",
 															}}>
 															<Form.Item
-																label=" Glossary Textbox"
+																label="Upload Vision File"
 																style={{ flex: "1 1 70%", marginRight: "5px" }}>
-																<TextArea
-																	rows={10}
-																	placeholder="Enter your objective"
-																	value={textBox.glossary}
-																	onChange={(e) =>
-																		setTextBox({
-																			...textBox,
-																			glossary: e.target.value,
-																		})
-																	}
-																	style={{ color: "black" }}
+																<Input
+																	type="file"
+																	name="vision"
+																	onChange={handleVisionFileChange}
 																/>
 															</Form.Item>
 															<Form.Item
-																label=" User analysis Textbox"
+																label="Upload File"
 																style={{ flex: "1 1 70%", marginRight: "5px" }}>
-																<TextArea
-																	rows={10}
-																	placeholder="Enter your objective"
-																	value={textBox.user_analysis}
-																	onChange={(e) =>
-																		setTextBox({
-																			...textBox,
-																			user_analysis: e.target.value,
-																		})
-																	}
-																	style={{ color: "black" }}
+																<Input
+																	type="file"
+																	name="mvp"
+																	onChange={handleMvpFileChange}
 																/>
+															</Form.Item>
+															<Form.Item
+																label="Select Model"
+																style={{ flex: "18%", marginRight: "5px" }}>
+																<Select
+																	placeholder="Select Framework"
+																	optionFilterProp="children"
+																	onChange={handleModel}
+																	value={selectModel}
+																	defaultValue="gpt-3.5-turbo"
+																	options={[
+																		{
+																			value: "gpt-3.5-turbo",
+																			label: "gpt-3.5",
+																		},
+																		{
+																			value: "gpt-4o",
+																			label: "gpt-4o",
+																		},
+																		{
+																			value: "llama3-70b-8192",
+																			label: "LLama3-70 Billion",
+																		},
+																		{
+																			value: "mixtral-8x7b-32768",
+																			label: "Mixtral-8x7b",
+																		},
+																	]}
+																/>
+															</Form.Item>
+
+															<Form.Item style={{ marginTop: "30px" }}>
+																<Button
+																	type="primary"
+																	icon={<SearchOutlined />}
+																	onClick={handleGenerateStoriesByFiles}>
+																	Generate
+																</Button>
 															</Form.Item>
 														</Form>
 													</div>
-												</div>
-											) : (
-												<div>
-													<Form
-														layout="vertical"
+												)}
+
+												{result1.length > 0 && selectType === "input" && (
+													<div
 														style={{
-															width: "100%",
 															display: "flex",
 															alignItems: "center",
+															// border: "1px solid #ccc",
+															marginTop: "-10px",
+															// padding: 10,
+															borderRadius: "10px",
+															marginBottom: 10,
 														}}>
-														<Form.Item
-															label="Upload Vision File"
-															style={{ flex: "1 1 70%", marginRight: "5px" }}>
-															<Input
-																type="file"
-																name="vision"
-																onChange={handleVisionFileChange}
-															/>
-														</Form.Item>
-														<Form.Item
-															label="Upload File"
-															style={{ flex: "1 1 70%", marginRight: "5px" }}>
-															<Input
-																type="file"
-																name="mvp"
-																onChange={handleMvpFileChange}
-															/>
-														</Form.Item>
-														<Form.Item
-															label="Select Model"
-															style={{ flex: "18%", marginRight: "5px" }}>
-															<Select
-																placeholder="Select Framework"
-																optionFilterProp="children"
-																onChange={handleModel}
-																value={selectModel}
-																defaultValue="gpt-3.5-turbo"
-																options={[
-																	{
-																		value: "gpt-3.5-turbo",
-																		label: "gpt-3.5",
-																	},
-																	{
-																		value: "gpt-4o",
-																		label: "gpt-4o",
-																	},
-																	{
-																		value: "llama3-70b-8192",
-																		label: "LLama3-70 Billion",
-																	},
-																	{
-																		value: "mixtral-8x7b-32768",
-																		label: "Mixtral-8x7b",
-																	},
-																]}
-															/>
-														</Form.Item>
+														<Form
+															layout="vertical"
+															style={{
+																width: "100%",
+																display: "flex",
+																alignItems: 'end',
+																alignContent: 'end',
+																// border:'2px solid',
 
-														<Form.Item style={{ marginTop: "30px" }}>
-															<Button
-																type="primary"
-																icon={<SearchOutlined />}
-																onClick={handleGenerateStoriesByFiles}>
-																Generate
-															</Button>
-														</Form.Item>
-													</Form>
-												</div>
-											)}
+															}}>
+															<Form.Item
+																label="Feedback"
+																style={{ flex: "1 1 70%", marginRight: "5px" }}
+															>
+																<TextArea
+																	rows={4}
+																	placeholder="Provide your feedback here..."
+																	value={feedback}
+																	onChange={(e) => setFeedBack(e.target.value)}
+																	style={{ width: "100%" }}
+																	autoSize={{ minRows: 2 }}
+																/>
+															</Form.Item>
+															
 
-											{result1.length > 0 && selectType === "input" && (
-												<div
-													style={{
-														display: "flex",
-														alignItems: "center",
-														// border: "1px solid #ccc",
-														marginTop: "-10px",
-														// padding: 10,
-														borderRadius: "10px",
-														marginBottom: 10,
-													}}>
-													<Form
-														layout="vertical"
-														style={{
-															width: "100%",
-															display: "flex",
-															alignItems: 'end',
-															alignContent: 'end',
-															// border:'2px solid',
+															<Form.Item style={{ marginRight: "7px" }}>
+																<Button
+																	type="primary"
+																	icon={<SearchOutlined />}
+																	onClick={handleGenerateStories}>
+																	Regenerate
+																</Button>
+															</Form.Item>
 
-														}}>
-														<Form.Item
-															label="Feedback"
-															style={{ flex: "1 1 70%", marginRight: "5px" }}
-														>
-															<TextArea
-																rows={4}
-																placeholder="Provide your feedback here..."
-																value={feedback}
-																onChange={(e) => setFeedBack(e.target.value)}
-																style={{ width: "100%" }}
-																autoSize={{ minRows: 2 }}
-															/>
-														</Form.Item>
-														<Form.Item style={{ display: 'flex', alignItems: 'end' }}>
+															<Form.Item style={{ display: 'flex', alignItems: 'end' }}>
 															<Button
 																type="primary"
 																// icon={<SearchOutlined />}
@@ -1500,23 +1640,63 @@ const App = ({ result1, setResult1 }) => {
 															</Button>
 														</Form.Item>
 
-													</Form>
-												</div>
-											)}
-										</div>
-									)}
+														</Form>
+													</div>
+												)}
+											</div>
+										)}
 
-									{selectType === "file" && (
+										{selectType === "file" && (
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													width: "81%",
+													border: "1px solid #ccc",
+													paddingRight: 15,
+													paddingLeft: 15,
+													marginBottom: 5,
+													borderRadius: "10px",
+												}}>
+												<Form
+													layout="vertical"
+													style={{
+														width: "100%",
+														display: "flex",
+														alignItems: "center",
+													}}>
+													<Form.Item
+														label="Upload File"
+														style={{ flex: 1, marginRight: "5px" }}>
+														<Input
+															type="file"
+															onChange={(e) => setSelectedFile(e.target.files[0])}
+														/>
+													</Form.Item>
+													<Form.Item style={{ marginBottom: "-4px" }}>
+														<Button
+															type="primary"
+															onClick={() => {
+																handleFileUpload();
+															}}
+															disabled={selectedFile === null}>
+															Upload
+														</Button>
+													</Form.Item>
+												</Form>
+											</div>
+										)}
+									</div>
+
+									{result1.length > 0 && selectType === "file" && (
 										<div
 											style={{
 												display: "flex",
 												alignItems: "center",
-												width: "81%",
 												border: "1px solid #ccc",
-												paddingRight: 15,
-												paddingLeft: 15,
-												marginBottom: 5,
+												padding: 10,
 												borderRadius: "10px",
+												marginBottom: 10,
 											}}>
 											<Form
 												layout="vertical"
@@ -1526,175 +1706,153 @@ const App = ({ result1, setResult1 }) => {
 													alignItems: "center",
 												}}>
 												<Form.Item
-													label="Upload File"
-													style={{ flex: 1, marginRight: "5px" }}>
-													<Input
-														type="file"
-														onChange={(e) => setSelectedFile(e.target.files[0])}
+													label="Objective"
+													style={{ flex: "1 1 70%", marginRight: "5px" }}>
+													<TextArea
+														rows={2}
+														placeholder="Enter your objective"
+														value={fileContent}
+														onChange={(e) => setFileContent(e.target.value)}
+														style={{ color: "black" }}
+														autoSize={{ minRows: 2 }}
 													/>
 												</Form.Item>
-												<Form.Item style={{ marginBottom: "-4px" }}>
+											</Form>
+										</div>
+									)}
+									{result1.length > 0 && showFeedBack && (
+										<div
+											style={{
+												display: "flex",
+												alignItems: "center",
+												border: "1px solid #ccc",
+												padding: 10,
+												borderRadius: "10px",
+												marginBottom: 10,
+											}}>
+											<Form
+												layout="vertical"
+												style={{
+													width: "100%",
+													display: "flex",
+													alignItems: "center",
+												}}>
+												<Form.Item
+													label="Feedback"
+													style={{ flex: "1 1 70%", marginRight: "5px" }}>
+													<TextArea
+														rows={4}
+														placeholder="Provide your feedback here..."
+														value={feedback1}
+														onChange={(e) => setFeedBack1(e.target.value)}
+														style={{ width: "100%" }}
+														autoSize={{ minRows: 2 }}
+													/>
+												</Form.Item>
+												<Form.Item>
 													<Button
 														type="primary"
-														onClick={() => {
-															handleFileUpload();
-														}}
-														disabled={selectedFile === null}>
-														Upload
+														style={{ marginTop: "25px" }}
+														onClick={handleGenerateStoriesByFiles}>
+														Submit
 													</Button>
 												</Form.Item>
 											</Form>
 										</div>
 									)}
-								</div>
-
-								{result1.length > 0 && selectType === "file" && (
-									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											border: "1px solid #ccc",
-											padding: 10,
-											borderRadius: "10px",
-											marginBottom: 10,
-										}}>
-										<Form
-											layout="vertical"
+									{result1.length > 0 && (
+										<div
 											style={{
-												width: "100%",
 												display: "flex",
-												alignItems: "center",
+												flexDirection: 'column',
+												alignItems: "end",
+												border: "1px solid #ccc",
+												padding: 10,
+												borderRadius: "10px",
+												marginBottom: 5,
 											}}>
-											<Form.Item
-												label="Objective"
-												style={{ flex: "1 1 70%", marginRight: "5px" }}>
-												<TextArea
-													rows={2}
-													placeholder="Enter your objective"
-													value={fileContent}
-													onChange={(e) => setFileContent(e.target.value)}
-													style={{ color: "black" }}
-													autoSize={{ minRows: 2 }}
-												/>
-											</Form.Item>
-										</Form>
-									</div>
-								)}
-								{result1.length > 0 && showFeedBack && (
-									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											border: "1px solid #ccc",
-											padding: 10,
-											borderRadius: "10px",
-											marginBottom: 10,
-										}}>
-										<Form
-											layout="vertical"
-											style={{
-												width: "100%",
-												display: "flex",
-												alignItems: "center",
-											}}>
-											<Form.Item
-												label="Feedback"
-												style={{ flex: "1 1 70%", marginRight: "5px" }}>
-												<TextArea
-													rows={4}
-													placeholder="Provide your feedback here..."
-													value={feedback1}
-													onChange={(e) => setFeedBack1(e.target.value)}
+												
+											<Space
+												direction="vertical"
+												style={{ width: "100%", padding: "10px 0px" }}>
+												<Table
+													scroll={{ x: 1200, y: 500 }}
 													style={{ width: "100%" }}
-													autoSize={{ minRows: 2 }}
+													dataSource={result1}
+													columns={[
+														...columns,
+														{
+															title: "Actions",
+															key: "actions",
+															render: (_, record) => (
+																<div
+																	style={{
+																		display: "flex",
+																		justifyContent: "space-between",
+																		gap: "10px",
+																	}}>
+
+																	<button
+																		// onClick={() => hand}
+																		onClick={() => handleAdd()}
+																		style={{
+																			backgroundColor: "rgba(52, 170, 52, 0.74)",
+																			color: "white",
+																			padding: "5px 20px",
+																			border: "none",
+																			borderRadius: "5px",
+																			cursor: "pointer",
+																		
+																		}}>
+																		Add 
+																	</button>
+																	
+																	<button
+																		onClick={() => handleEdit(record)}
+																		style={{
+																			backgroundColor: "rgba(2, 130, 204, 0.74)",
+																			color: "white",
+																			padding: "5px 20px",
+																			border: "none",
+																			borderRadius: "5px",
+																			cursor: "pointer",
+																		}}>
+																		Edit
+																	</button>
+																	<button
+																		onClick={() => handleDelete(record)}
+																		style={{
+																			backgroundColor: "rgb(199, 81, 81)",
+																			color: "white",
+																			padding: "5px 20px",
+																			border: "none",
+																			borderRadius: "5px",
+																			cursor: "pointer",
+																		}}>
+																		Delete
+																	</button>
+																</div>
+															),
+														},
+													]}
+													pagination={false}
 												/>
-											</Form.Item>
-											<Form.Item>
-												<Button
-													type="primary"
-													style={{ marginTop: "25px" }}
-													onClick={handleGenerateStoriesByFiles}>
-													Submit
-												</Button>
-											</Form.Item>
-										</Form>
-									</div>
-								)}
-								{result1.length > 0 && (
-									<div
-										style={{
-											display: "flex",
-											flexDirection: 'column',
-											alignItems: "end",
-											border: "1px solid #ccc",
-											padding: 10,
-											borderRadius: "10px",
-											marginBottom: 5,
-										}}>
-										<Space
-											direction="vertical"
-											style={{ width: "100%", padding: "10px 0px" }}>
-											<Table
-												scroll={{ x: 1200, y: 500 }}
-												style={{ width: "100%" }}
-												dataSource={result1}
-												columns={[
-													...columns,
-													{
-														title: "Actions",
-														key: "actions",
-														render: (_, record) => (
-															<div
-																style={{
-																	display: "flex",
-																	justifyContent: "space-between",
-																	gap: "10px",
-																}}>
-																<button
-																	onClick={() => handleEdit(record)}
-																	style={{
-																		backgroundColor: "rgba(52, 170, 52, 0.74)",
-																		color: "white",
-																		padding: "5px 20px",
-																		border: "none",
-																		borderRadius: "5px",
-																		cursor: "pointer",
-																	}}>
-																	Edit
-																</button>
-																<button
-																	onClick={() => handleDelete(record)}
-																	style={{
-																		backgroundColor: "rgb(199, 81, 81)",
-																		color: "white",
-																		padding: "5px 20px",
-																		border: "none",
-																		borderRadius: "5px",
-																		cursor: "pointer",
-																	}}>
-																	Delete
-																</button>
-															</div>
-														),
-													},
-												]}
-												pagination={false}
-											/>
-										</Space>
-										{/* <Form.Item> */}
-										<Button
-											type="primary"
-											// style={{ marginTop: "25px" }}
-											onClick={handleApproveStories}>
-											Approve Stories
-										</Button>
-										{/* </Form.Item> */}
-									</div>
-								)}
+											</Space>
+											{/* <Form.Item> */}
+											
+											<Button
+												type="primary"
+												// style={{ marginTop: "25px" }}
+												onClick={handleApproveStories}>
+												Approve Stories
+											</Button>
+											{/* </Form.Item> */}
+										</div>
+									)}
 
 
 
-								{/* {result1.length > 0 && showFeedBack && (
+									{/* {result1.length > 0 && showFeedBack && (
 									<div
 										style={{
 											display: "flex",
@@ -1707,24 +1865,25 @@ const App = ({ result1, setResult1 }) => {
 											borderRadius: "10px",
 										}}></div>
 								)} */}
-								{isApproved && (
-									<>
-										<div
-											style={{
-												width: "100%",
-												border: "1px solid #ccc",
-												padding: 10,
-												borderRadius: "10px",
-											}}>
-											<Form
-												layout="vertical"
+
+									{isApproved && (
+										<>
+											<div
 												style={{
 													width: "100%",
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "end",
+													border: "1px solid #ccc",
+													padding: 10,
+													borderRadius: "10px",
 												}}>
-												<Form.Item
+												<Form
+													layout="vertical"
+													style={{
+														width: "100%",
+														display: "flex",
+														alignItems: "center",
+														justifyContent: "end",
+													}}>
+													{/* <Form.Item
 													label="Feedback"
 													style={{ width: "63%", marginRight: "20px" }}>
 													<TextArea
@@ -1735,85 +1894,90 @@ const App = ({ result1, setResult1 }) => {
 														style={{ color: "black" }}
 													// autoSize={{ minRows: 2 }}
 													/>
-												</Form.Item>
+												</Form.Item> */}
 
-												<Form.Item label="Prioritization Technique">
-													<Select
-														placeholder="Select Technique"
-														optionFilterProp="children"
-														onChange={handleLanguage}
-														value={prioritizationTechnique}
-														options={labelOptions}
-													/>
-												</Form.Item>
-												<Form.Item
-													label="Model"
-													style={{ marginLeft: "10px", marginRight: "10px" }}>
-													<Select
-														placeholder="Select Model"
-														optionFilterProp="children"
-														onChange={handleModel}
-														value={selectModel}
-														defaultValue="gpt-3.5-turbo"
-														options={[
-															{
-																value: "gpt-3.5-turbo",
-																label: "GPT-3.5 Turbo",
-															},
-															{
-																value: "gpt-4o",
-																label: "GPT-4 Omni",
-															},
-															{
-																value: "llama3-70b-8192",
-																label: "LLama3-70 Billion",
-															},
-															{
-																value: "mixtral-8x7b-32768",
-																label: "Mixtral-8x7b",
-															},
-														]}
-													/>
-												</Form.Item>
-												<Form.Item
-													style={{
-														display: "flex",
-														alignItems: "end",
-														marginTop: "25px",
-													}}>
-													<Button
-														type="primary"
-														icon={<SearchOutlined />}
-														onClick={handleSubmit}
-														disabled={prioritizationTechnique === null}>
-														Generate
-													</Button>
-												</Form.Item>
-											</Form>
-										</div>
-									</>
-								)}
-
-								{displayChatBox && (
-									<div>
-										{responses && (
-											<div style={{ paddingTop: "10px" }}>
-												{renderChatMessages()}
+													<Form.Item label="Prioritization Technique">
+														<Select
+															placeholder="Select Technique"
+															optionFilterProp="children"
+															onChange={handleLanguage}
+															value={prioritizationTechnique}
+															options={labelOptions}
+														/>
+													</Form.Item>
+													<Form.Item
+														label="Model"
+														style={{ marginLeft: "10px", marginRight: "10px" }}>
+														<Select
+															placeholder="Select Model"
+															optionFilterProp="children"
+															onChange={handleModel}
+															value={selectModel}
+															defaultValue="gpt-3.5-turbo"
+															options={[
+																{
+																	value: "gpt-3.5-turbo",
+																	label: "GPT-3.5 Turbo",
+																},
+																{
+																	value: "gpt-4o",
+																	label: "GPT-4 Omni",
+																},
+																{
+																	value: "llama3-70b-8192",
+																	label: "LLama3-70 Billion",
+																},
+																{
+																	value: "mixtral-8x7b-32768",
+																	label: "Mixtral-8x7b",
+																},
+															]}
+														/>
+													</Form.Item>
+													<Form.Item
+														style={{
+															display: "flex",
+															alignItems: "end",
+															marginTop: "25px",
+														}}>
+														<Button
+															type="primary"
+															icon={<SearchOutlined />}
+															onClick={handleSubmit}
+															disabled={prioritizationTechnique === null}>
+															Generate
+														</Button>
+													</Form.Item>
+												</Form>
 											</div>
-										)}
-									</div>
-								)}
-							</Panel>
-						</Collapse>
+										</>
+									)}
+
+
+									{displayChatBox && (
+										<div>
+											{responses && (
+												<div style={{ paddingTop: "10px" }}>
+													{renderChatMessages()}
+												</div>
+											)}
+										</div>
+									)}
+								</Panel>
+							</Collapse>
+
+						</div>
+					</Content>
+				</Layout>
+				<Footer className="footerFixed">
+					<div style={{ float: "right", lineHeight: 0 }}>
+						<p>&copy; {new Date().getFullYear()} GPT LAB. All rights reserved.</p>
 					</div>
-				</Content>
+				</Footer>
+
 			</Layout>
-			<Footer className="footerFixed">
-				<div style={{ float: "right", lineHeight: 0 }}>
-					<p>&copy; {new Date().getFullYear()} GPT LAB. All rights reserved.</p>
-				</div>
-			</Footer>
-		</Layout>
+		</>
+
 	);
 };
 export default App;
