@@ -362,7 +362,9 @@ def parse_user_stories(text_response):
         r"### User Story \d+:\n"
         r"- User Story: (.*?)\n"
         r"- Epic: (.*?)\n"
-        r"- Description: (.*?)(?=\n### User Story \d+:|\Z)",
+        # r"- Description: (.*?)(?=\n### User Story \d+:|\Z)",
+        # r"- Suggestion: (.*?)",
+        r"- Description: (.*?)(?:\n- Suggestion: (.*?))?(?=\n### User Story \d+:|\Z)",
         re.DOTALL
     )
 
@@ -374,6 +376,7 @@ def parse_user_stories(text_response):
             "user_story": match[0].strip(),
             "epic": match[1].strip(),
             "description": match[2].strip(),
+            "suggestion": match[3].strip() if match[3] else "No suggestions provided",
         })
 
     if not user_stories:
@@ -381,6 +384,7 @@ def parse_user_stories(text_response):
             "user_story": "User story not provided",
             "epic": "Epic not provided",
             "description": "Description not provided",
+            "suggestion": "Suggestion not provided",
         })
 
     return user_stories
@@ -447,7 +451,7 @@ def parse_user_stories(text_response):
 #         raise Exception(f"Failed to process the request with OpenAI: {response.text}")
 
 
-def process_role(input_content, model, headers, role, feedback):
+def process_role(input_content, image_url, model, headers, role, feedback):
     # Determine the URL and headers based on the model
     if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
         url = LLAMA_URL
@@ -476,30 +480,130 @@ def process_role(input_content, model, headers, role, feedback):
     "You are a helpful assistant tasked with generating unique user stories and grouping them under relevant epics based on any project vision or MVP goal provided.\n"
     "When generating user stories, ensure they are grouped under relevant epics based on overarching themes, functionalities, or MVP goals identified. Each epic should contain multiple user stories that cover various aspects of the same theme or functionality. "
     "Aim to generate as many stories as necessary to fully cover the scope of the project, with **no upper limit on the number of user stories**. Focus on breaking down large functionalities into individual, task-specific stories.\n\n"
-    f"Given the project vision: '{input_content['vision']}' and MVP goals: '{input_content['mvp']}', and the glossary: '{input_content['glossary']}' and user analysis: '{input_content['user_analysis']}', generate a comprehensive and distinct set of user stories that align with these core elements. "
+    f"Given the project vision: '{input_content['vision']}' and MVP goals: '{input_content['mvp']}', and the glossary: '{input_content['glossary']}' and user analysis: '{input_content['user_analysis']}' and context Image {image_url}, generate a comprehensive and distinct set of user stories that align with these core elements. "
     "Ensure each story comprehensively addresses both functional and technical aspects relevant to the project, with a focus on supporting the project's primary vision and achieving a highly detailed MVP.\n\n"
      + feedback_section +
     "For each user story, provide the following details:\n"
     "1. User Story: A clear and concise description that encapsulates a specific need or problem. Example: 'As a <role>, I want to <action>, in order to <benefit>'. Each story should directly support the project's vision or contribute towards a functional MVP.\n"
     "2. Epic: The broad epic under which the user story falls. Each epic can encompass multiple related user stories that share a similar scope or functionality.\n"
-    "3. Description: Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete, particularly in terms of MVP completion and alignment with the vision.\n\n"
+    "3. Description: Very Very Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete, particularly in terms of MVP completion and alignment with the vision. Like Context, Functionality Breakdown, Edge Cases & Error Handling, Acceptance Criteria, Technical Considerations, User Experience Factors.\n\n"
+    "4. Suggestion: If any role analyzing the user story has improvements, modifications, or additional considerations, list them here. Ensure these suggestions are actionable and directly relevant to enhancing the user story, epic, or description. Specify the role providing the suggestion (e.g., Product Owner, Developer, QA Engineer).\n"
+    
     "Additional Guidance:\n"
     "- **Encourage atomic functionalities**: Create user stories for individual actions and small steps within each phase of the MVP.\n"
     "- **Ensure maximum detail**: Generate highly specific user stories that focus on even the smallest functionalities, such as scanning, logging in, generating reports, and handling errors.\n"
+    "- **At least 10 stories**: Ensure that a minimum of 10 user stories are generated to cover all major and minor aspects of the MVP.\n"
     "- **No upper limit**: Keep breaking down actions until all core and sub-tasks within the MVP are covered.\n\n"
+    "- **Remember At least 10 stories are must**: Ensure that a minimum of 10 user stories are generated to cover all major and minor aspects of the MVP.\n"
+
     "Please use the following format for each story:\n"
     "### User Story X:\n"
     "- User Story: As a <role>, I want to <action>, in order to <benefit>.\n"
     "- Epic: <epic> (This epic may encompass multiple related user stories)\n"
+    "- Description: Very Very Detailed and clear acceptance criteria that define the success of the user story, particularly in achieving MVP functionality and supporting the overall vision. Like Context, Functionality Breakdown, Edge Cases & Error Handling, Acceptance Criteria, Technical Considerations, User Experience Factors. \n"
+    "- Suggestion: \n"
+    f"    <The role providing the suggestion> {role} \n"
+    
+    )
+    # ).format(vision=input_content['vision'], mvp=input_content['mvp'], glossary=input_content['glossary'], user_analysis=input_content['user_analysis'], context=image_data)
+  
+
+    print(f"Total prompt length: {len(prompt_content)} characters")
+    # Prepare the data for the POST request
+    post_data = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
+            {"role": "user", "content": prompt_content},
+        ],
+        "temperature": 0.7
+    })
+
+    # post_data = json.dumps({
+    #     "model": model,
+    #     "messages": [
+    #         {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert."},
+    #         {"role": "user", "content": prompt_content},
+    #         {"role": "user", "content": f"Here is an image reference: {image_url}"}  # Use image URL in prompt
+    #     ],
+    #     "temperature": 0.7
+    # })
+
+    response = requests.post(url, data=post_data, headers=headers)
+
+    if response.status_code == 200:
+        response_data = response.json()
+        generated_content = response_data['choices'][0]['message']['content']
+        print(f"Generated content for role {role}: {generated_content}")
+        return generated_content
+        
+    else:
+        raise Exception(f"Failed to process the request for {role} with OpenAI: {response.text}")
+
+
+
+
+def regenerate_process_role(input_content, model, headers, role, feedback):
+    # Determine the URL and headers based on the model
+    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+        url = LLAMA_URL
+        headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    else:
+        url = OPENAI_URL
+        headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
+
+    print('feedback comes',feedback)   
+
+    if feedback is None:
+        print("No feedback provided. Generating user stories without additional feedback.")
+    else:
+        print(f"Feedback provided: {feedback}")
+
+     # Adjust the prompt to include feedback if provided
+    feedback_section = (
+        f"Additionally, incorporate the following feedback when generating user stories: '{feedback}'. "
+        "Ensure the feedback directly influences the epics, user stories, or acceptance criteria as applicable.\n\n"
+        if feedback else ""
+    )
+
+
+    # Create a role-specific prompt based on the input content
+    improvement_prompt = (
+    "You are an expert in user story refinement. Your task is to enhance the given set of generated user stories based on the provided feedback. "
+    "Ensure that only the aspects mentioned in the feedback are improved, while preserving the original structure, intent, and categorization of the user stories.\n\n"
+    
+    "### Given User Stories:\n"
+    f"{input_content['generated_stories']}\n\n"
+    
+    "### Feedback for Improvement:\n"
+    f"'{feedback_section}'\n\n"
+    
+    "### Instructions:\n"
+    "- **Do not change the overall structure or remove any user stories unless explicitly asked.**\n"
+    "- **Only modify aspects that align with the feedback, ensuring all improvements are meaningful and relevant.**\n"
+    "- **Retain the same number of stories, epics, and descriptions unless the feedback explicitly requests adding new stories.**\n"
+    "- **If the feedback suggests adding details, expand on the relevant parts without altering other sections.**\n"
+    "- **If the feedback requests additional user stories, create new ones that align with the project's vision and existing epics while maintaining consistency with the current structure.**\n\n"
+    
+    "### Output Format:\n"
+    "Provide the improved user stories in the same format as originally structured, ensuring all changes align strictly with the feedback provided."
+    "Remember Please use the following format for each story:\n"
+    "### User Story X:\n"
+    "- User Story: As a <role>, I want to <action>, in order to <benefit>.\n"
+    "- Epic: <epic> (This epic may encompass multiple related user stories)\n"
     "- Description: Detailed and clear acceptance criteria that define the success of the user story, particularly in achieving MVP functionality and supporting the overall vision.\n"
-    ).format(vision=input_content['vision'], mvp=input_content['mvp'], glossary=input_content['glossary'], user_analysis=input_content['user_analysis'])
+    "- Suggestion: \n"
+    f"   - Role: <The role providing the suggestion> {role} \n"
+    "    - Suggestion: <Feedback or improvement proposed>\n"
+    )
+    # ).format(generated_stories=input_content['generated_stories'], feedback=feedback)
 
     # Prepare the data for the POST request
     post_data = json.dumps({
         "model": model,
         "messages": [
             {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
-            {"role": "user", "content": prompt_content}
+            {"role": "user", "content": improvement_prompt}
         ],
         "temperature": 0.7
     })
@@ -514,3 +618,6 @@ def process_role(input_content, model, headers, role, feedback):
         
     else:
         raise Exception(f"Failed to process the request for {role} with OpenAI: {response.text}")
+
+
+

@@ -1,8 +1,14 @@
 import asyncio
+import base64
+from io import BytesIO
 import random
 import logging
 import os
 import re
+import shutil
+import textwrap
+from tkinter import Image
+import uuid
 from starlette.applications import Starlette
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
@@ -13,8 +19,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
 from dotenv import load_dotenv
 import httpx
-from httpx import AsyncClient, Timeout
-from fastapi import FastAPI, UploadFile, File, Form, websockets 
+from httpx import AsyncClient, Timeout, request
+from fastapi import FastAPI, Path, UploadFile, File, Form, websockets 
 from fastapi.responses import JSONResponse 
 import random
 import pdfplumber 
@@ -29,7 +35,7 @@ from helpers import (
     construct_context_prompt, construct_batch_100_dollar_prompt, parse_100_dollar_response, 
     validate_dollar_distribution, enrich_agents_stories_with_dollar_distribution, enrich_stories_with_dollar_distribution,
     construct_stories_formatted, ensure_unique_keys, estimate_wsjf, estimate_moscow, 
-    save_uploaded_file, parse_csv_to_json, estimate_kano, estimate_ahp, send_to_llm
+    save_uploaded_file, parse_csv_to_json, estimate_kano, estimate_ahp, send_to_llm, send_to_llm_for_img
 )
 
 from table_helper import(
@@ -45,6 +51,7 @@ from agent import (
     prioritize_stories_with_ahp, categorize_stories_with_moscow,
     generate_user_stories_with_epics,
     process_role,
+    regenerate_process_role,
     parse_user_stories,
     prioritize_stories_with_100_dollar_method, OPENAI_URL, check_stories_with_framework
 )
@@ -459,6 +466,8 @@ async def catch_all(request):
 
 
 
+
+
 # async def generate_user_stories(request: Request):
 #     data = await request.json()
 #     headers = {
@@ -497,22 +506,20 @@ async def catch_all(request):
 #         print(f"No WebSocket connection found for request_id: {request_id}")
 #     else:
 #         print(f"WebSocket connection found for request_id: {request_id}")
-
-#     response = process_role(input_content, model, headers)
     
-#     # # Sequentially process each role
-#     # for role in roles:
-#     #     # if websocket:
-#     #     # await websocket.send_json({"message": f"Processing role: {role}"})
-#     #     print(f"Processing role: {role}")
-#     #     response = process_role(input_content, model, headers, role)
-#     #     # if websocket:
-#     #     #     await websocket.send_json({"message": f"Completed processing role: {role}"})
-#     #     input_content["previous_response"] = response  # Update input for the next role
+#     # Sequentially process each role
+#     for role in roles:
+#         # if websocket:
+#         # await websocket.send_json({"message": f"Processing role: {role}"})
+#         print(f"Processing role: {role}")
+#         response = process_role(input_content, model, headers, role, feedback)
+#         # if websocket:
+#         #     await websocket.send_json({"message": f"Completed processing role: {role}"})
+#         input_content["previous_response"] = response  # Update input for the next role
         
 
 #     # Parse the final response (from Compliance)
-#     final_response = parse_user_stories(response)
+#     final_response = parse_user_stories(input_content["previous_response"])
 
 #     # The last role's response is returned
 #     return JSONResponse({"final_response": final_response})
@@ -535,9 +542,22 @@ async def generate_user_stories(request: Request):
     user_analysis = data['user_analysis']
     feedback = data['feedback']
     request_id = data.get("request_id")
+    context_image = data.get("context_image")
+
 
     print(f"feedback: {feedback}")
 
+    
+
+    image_data = None
+
+
+   
+    if context_image:
+        image_data = base64.b64decode(context_image) 
+        if image_data:
+            print(f"Decoded image size: {len(image_data)} bytes")
+    
     # Define the roles in sequence
     roles = ["PO", "SA", "Security", "Compliance"]
 
@@ -562,7 +582,60 @@ async def generate_user_stories(request: Request):
         # if websocket:
         # await websocket.send_json({"message": f"Processing role: {role}"})
         print(f"Processing role: {role}")
-        response = process_role(input_content, model, headers, role, feedback)
+        response = process_role(input_content, image_data,  model, headers, role, feedback)
+        # if websocket:
+        #     await websocket.send_json({"message": f"Completed processing role: {role}"})
+        input_content["previous_response"] = response  # Update input for the next role
+        # input_content["previous_response"] = summarize_text(response, max_length=20000)
+
+    # Parse the final response (from Compliance)
+    final_response = parse_user_stories(input_content["previous_response"])
+
+    # The last role's response is returned
+    return JSONResponse({"final_response": final_response})
+
+
+
+
+async def regenerate_user_stories(request: Request):
+    data = await request.json()
+    headers = {
+        "Authorization": f"Bearer {random.choice(api_keys)}",
+        "Content-Type": "application/json"
+    }
+
+    if not data or 'model' not in data:
+        return JSONResponse({'error': 'Missing required data: vision, and model'}, status_code=400)
+
+    model = data['model']
+    generated_stories = data['generated_stories']
+    feedback = data['feedback']
+    request_id = data.get("request_id")
+
+    print(f"feedback: {feedback}")
+
+    # Define the roles in sequence
+    roles = ["PO", "SA", "Security", "Compliance"]
+
+    # Initial input to the first role (PO) is based on the original data
+    input_content = {
+        "generated_stories": generated_stories,
+        "previous_response": None  # No previous response for the first model
+    }
+
+    websocket = websocket_connections.get(request_id)
+
+    if not websocket:
+        print(f"No WebSocket connection found for request_id: {request_id}")
+    else:
+        print(f"WebSocket connection found for request_id: {request_id}")
+    
+    # Sequentially process each role
+    for role in roles:
+        # if websocket:
+        # await websocket.send_json({"message": f"Processing role: {role}"})
+        print(f"Processing role: {role}")
+        response = regenerate_process_role(input_content, model, headers, role, feedback)
         # if websocket:
         #     await websocket.send_json({"message": f"Completed processing role: {role}"})
         input_content["previous_response"] = response  # Update input for the next role
@@ -651,6 +724,7 @@ async def generate_user_stories_by_files(request: Request):
     return JSONResponse({"stories_with_epics": stories_with_epics})
 
 
+
 async def upload_csv(request: Request):
     form = await request.form()
     file = form.get("file")
@@ -673,6 +747,7 @@ app = Starlette(debug=True, middleware=[
     Middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 ], routes=[
     Route('/api/generate-user-stories', generate_user_stories, methods=['POST']),
+    Route('/api/regenerate-user-stories', regenerate_user_stories, methods=['POST']),
     Route('/api/generate-user-stories-by-files', generate_user_stories_by_files, methods=['POST']),
     Route('/api/upload-csv', upload_csv, methods=['POST']),
     Route('/api/check-user-stories-quality', check_user_stories_quality, methods=['POST']),
@@ -685,4 +760,4 @@ app = Starlette(debug=True, middleware=[
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app,host='0.0.0.0', port=8001)
+    uvicorn.run(app,host='0.0.0.0', port=8000)

@@ -141,6 +141,35 @@ async def send_to_llm(prompt, headers, model, timeout=100):
         return completion_text
     else:
         raise Exception("Failed to process the request with OpenAI")
+    
+
+async def send_to_llm_for_img(prompt, image_base64, headers, model, timeout=100):
+    if model.startswith("llama3") or model == "mixtral-8x7b-32768":
+        url = LLAMA_URL
+        headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
+    else:
+        url = OPENAI_URL
+        headers["Authorization"] = f"Bearer {random.choice(api_keys)}"
+    
+    post_data = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": f"data:image/png;base64,{image_base64}"}
+            ]}
+        ],
+        "temperature": 0.7
+    }
+    
+    response = requests.post(url, json=post_data, headers=headers, timeout=timeout)
+    
+    if response.status_code == 200:
+        completion = response.json()
+        return completion["choices"][0]["message"]["content"]
+    else:
+        raise Exception(f"Failed to process the request: {response.text}")
 
 def parse_prioritized_stories(completion_text):
     pattern = re.compile(

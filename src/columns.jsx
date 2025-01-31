@@ -27,11 +27,18 @@ export const columns = [
     width: 600,
   },
   {
+    title: "Suggested By",
+    dataIndex: "suggestion",
+    key: "suggestion",
+    width: 200,
+  },
+  {
     title: "Status",
     dataIndex: "status",
     key: "status",
     width: 90,
   },
+
 ];
 
 export const frameworkColumns = [
