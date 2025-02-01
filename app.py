@@ -86,6 +86,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 mvp = data.get('mvps')               
                 model = data.get("model")
                 client_feedback = data.get("feedback")
+                rounds = data.get("rounds")
                 prioritization_type = data.get("prioritization_type").upper()  # Normalize to uppercase
                  # Check if `feedback` is present to distinguish the two types of requests
                 selected_panels = data.get("selected_panels", {})
@@ -105,7 +106,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if finalPrioritization is not True:
                     # Handle the original sendInput function's workflow
                     await run_agents_workflow(
-                        stories,vision, mvp, prioritization_type, model, client_feedback, websocket
+                        stories,vision, mvp, prioritization_type, model, client_feedback, websocket, rounds
                     )
                 else:
                     # Handle the new sendInputData function's workflow
@@ -120,6 +121,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         po_weight,
                         sa_weight,
                         dev_weight,
+                        rounds
                     )
                 # await run_agents_workflow(stories, prioritization_type, model, client_feedback, websocket)
     except WebSocketDisconnect:
@@ -130,10 +132,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # client_feedback=""
-async def run_agents_workflow(stories, vision, mvp, prioritization_type, model, client_feedback, websocket):
+async def run_agents_workflow(stories, vision, mvp, prioritization_type, model, client_feedback, websocket, rounds):
    
     # Step 1: Greetings
-    greetings_prompt = construct_product_owner_prompt({"stories": stories}, vision, mvp, client_feedback )
+    greetings_prompt = construct_product_owner_prompt({"stories": stories}, vision, mvp, rounds, client_feedback )
 
 
     greetings_response = await engage_agents(greetings_prompt, websocket, "PO", model)
@@ -189,10 +191,10 @@ async def run_agents_workflow(stories, vision, mvp, prioritization_type, model, 
         #await websocket.send_json({"agentType": "error", "message": "Error parsing greetings response. Please try again later."})
 
      # Step 2: Topic Introduction
-    topic_prompt = construct_senior_developer_prompt({"stories": stories}, vision, mvp, client_feedback )    #logger.info(f"topic_prompt : {topic_prompt}")
+    topic_prompt = construct_senior_developer_prompt({"stories": stories}, vision, mvp, rounds, client_feedback )    #logger.info(f"topic_prompt : {topic_prompt}")
     
     # Step 3: Context and Discussion
-    context_prompt = construct_solution_architect_prompt({"stories": stories}, vision, mvp, client_feedback ) 
+    context_prompt = construct_solution_architect_prompt({"stories": stories}, vision, mvp, rounds, client_feedback ) 
     
     # Run Step 2 and Step 3 concurrently
     topic_response, context_response = await asyncio.gather(

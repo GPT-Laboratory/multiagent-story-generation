@@ -971,11 +971,94 @@ async def stream_response_word_by_word(websocket, response, agent_type, delay=0.
 #     return prompt
 
 
-def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
+# def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
+#     stories_formatted = '\n'.join([
+#         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
+#         for index, story in enumerate(data['stories'])
+#     ])
+
+#     feedback_section = ""
+#     if client_feedback:
+#         feedback_section = "As you prioritize, consider the following feedback provided by the client:\n\n" + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
+
+#     print("Formatted Stories:")
+#     print(stories_formatted)
+#     if feedback_section:
+#         print("Client Feedback:")
+#         print(feedback_section)
+
+#     prompt = (
+#     "You are a Product Owner with extensive experience in product management, prioritization, and a deep understanding of business value, customer needs, and market impact.\n\n"
+#     "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
+#     f"### Product Vision:\n{vision}\n\n"
+#     f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
+#     f"{feedback_section}"
+#     "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
+#     "Ensure the total equals exactly 100 dollars. Use this format:\n"
+#     "- ID X: Y dollars\n"
+#     "- ID Z: W dollars\n\n"
+#     "Here are the stories:\n\n"
+#     f"{stories_formatted}\n\n"
+#     "---\n"
+#     "### Instructions:\n"
+#     "1. Perform the prioritization *five times*, revising priorities to account for changes in business goals or new insights.\n"
+#     "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
+#     "- ID X: Y dollars\n"
+#     "- ID Z: W dollars\n\n"
+#     "### Average Kendall Tau Distance:\n"
+#     "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
+#     "| Round  | Average Kendall Tau Distance |\n"
+#     "|--------|-----------------------------|\n"
+#     "| Round 1 | X.XXX |\n"
+#     "| Round 2 | Y.YYY |\n"
+#     "| Round 3 | Z.ZZZ |\n"
+#     "| Round 4 | A.AAA |\n"
+#     "| Round 5 | B.BBB |\n\n"
+#     "Analyze the consistency of rankings across rounds based on these values.\n\n"
+#     "### Pairwise Kendall Tau Distance:\n"
+#     "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
+#     "| Round Pair | Kendall Tau Distance |\n"
+#     "|------------|----------------------|\n"
+#     "| Round 1 vs Round 2 | X.XXX |\n"
+#     "| Round 1 vs Round 3 | Y.YYY |\n"
+#     "| Round 1 vs Round 4 | Z.ZZZ |\n"
+#     "| Round 1 vs Round 5 | A.AAA |\n"
+#     "| Round 2 vs Round 3 | B.BBB |\n"
+#     "| Round 2 vs Round 4 | C.CCC |\n"
+#     "| Round 2 vs Round 5 | D.DDD |\n"
+#     "| Round 3 vs Round 4 | E.EEE |\n"
+#     "| Round 3 vs Round 5 | F.FFF |\n"
+#     "| Round 4 vs Round 5 | G.GGG |\n\n"
+#     "### Final Output:\n"
+#     "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
+#     "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
+#     "- ID X: Y dollars\n"
+#     "- ID Z: W dollars\n\n"
+#     "**Prioritization 1:**\n"
+#     "- ID 1: X dollars\n"
+#     "- ID 2: Y dollars\n"
+#     "...\n"
+#     "**Prioritization 2:**\n"
+#     "- ID 1: A dollars\n"
+#     "- ID 2: B dollars\n\n"
+#     "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
+#     "- How the average Kendall Tau results influenced the selection.\n"
+#     "- Observed trends or consistencies in the rankings.\n"
+#     "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
+#     )
+
+
+#     return prompt
+
+
+
+def construct_product_owner_prompt(data, vision, mvp, rounds, client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
     ])
+
+
 
     feedback_section = ""
     if client_feedback:
@@ -986,6 +1069,20 @@ def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
     if feedback_section:
         print("Client Feedback:")
         print(feedback_section)
+
+    print("roundss:", rounds)
+
+    rounds = int(rounds)
+
+    # Generate the rounds section dynamically based on num_rounds
+    rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
+    
+    # Generate the pairwise comparison section dynamically
+    pairwise_section = []
+    for i in range(rounds):
+        for j in range(i+1, rounds):
+            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+    pairwise_section = "\n".join(pairwise_section)
 
     prompt = (
     "You are a Product Owner with extensive experience in product management, prioritization, and a deep understanding of business value, customer needs, and market impact.\n\n"
@@ -1001,7 +1098,7 @@ def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
     f"{stories_formatted}\n\n"
     "---\n"
     "### Instructions:\n"
-    "1. Perform the prioritization *five times*, revising priorities to account for changes in business goals or new insights.\n"
+    f"1. Perform the prioritization *{rounds} times*, revising priorities to account for changes in business goals or new insights.\n"
     "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
     "- ID X: Y dollars\n"
     "- ID Z: W dollars\n\n"
@@ -1009,12 +1106,13 @@ def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
     "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
     "| Round  | Average Kendall Tau Distance |\n"
     "|--------|-----------------------------|\n"
-    "| Round 1 | X.XXX |\n"
-    "| Round 2 | Y.YYY |\n"
-    "| Round 3 | Z.ZZZ |\n"
-    "| Round 4 | A.AAA |\n"
-    "| Round 5 | B.BBB |\n\n"
+    f"{rounds_section}\n\n"
     "Analyze the consistency of rankings across rounds based on these values.\n\n"
+    "### Pairwise Kendall Tau Distance:\n"
+    "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
+    "| Round Pair | Kendall Tau Distance |\n"
+    "|------------|----------------------|\n"
+    f"{pairwise_section}\n\n"
     "### Final Output:\n"
     "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
     "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
@@ -1033,47 +1131,7 @@ def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
     "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
     )
 
-    # prompt = (
-    #     "You are a Product Owner with extensive experience in product management, prioritization, and a deep understanding of business value, customer needs, and market impact.\n\n"
-    #     "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
-    #     f"### Product Vision:\n{vision}\n\n"
-    #     f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
-    #     f"{feedback_section}"
-    #     "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
-    #     "Ensure the total equals exactly 100 dollars. Use this format:\n"
-    #     "- ID X: Y dollars\n"
-    #     "- ID Z: W dollars\n\n"
-    #     "Here are the stories:\n\n"
-    #     f"{stories_formatted}\n\n"
-    #     "---\n"
-    #     "### Instructions:\n"
-    #     "1. Perform the prioritization *five times*, revising priorities to account for changes in business goals or new insights.\n"
-    #     "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
-    #     "- ID X: Y dollars\n"
-    #     "- ID Z: W dollars\n\n"
-    #     "### Comparison:\n"
-    #     "After completing the five rounds, calculate the *average Kendall Tau distance* for each round. This will help in understanding the consistency of rankings across rounds.\n\n"
-    #     "### Final Output:\n"
-    #     "1. Return the *two best prioritizations* based on the average Kendall Tau distance analysis and alignment with business goals.\n"
-    #     "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
-    #     "- ID X: Y dollars\n"
-    #     "- ID Z: W dollars\n\n"
-    #     "**Prioritization 1:**\n"
-    #     "- ID 1: X dollars\n"
-    #     "- ID 2: Y dollars\n"
-    #     "...\n"
-    #     "**Prioritization 2:**\n"
-    #     "- ID 1: A dollars\n"
-    #     "- ID 2: B dollars\n\n"
-    #     "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
-    #     "- How the average Kendall Tau distance influenced the selection.\n"
-    #     "- Observed trends or consistencies in the rankings.\n"
-    #     "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
-    # )
-
-
     return prompt
-
 
 
 # def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
@@ -1166,7 +1224,7 @@ def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
 
 
 
-def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
+def construct_senior_developer_prompt(data, vision, mvp, rounds, client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
@@ -1185,6 +1243,18 @@ def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
         print("Client Feedback:")
         print(feedback_section)
 
+    rounds = int(rounds)
+
+    # Generate the rounds section dynamically based on num_rounds
+    rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
+    
+    # Generate the pairwise comparison section dynamically
+    pairwise_section = []
+    for i in range(rounds):
+        for j in range(i+1, rounds):
+            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+    pairwise_section = "\n".join(pairwise_section)
+
     prompt = (
         "You are a Senior Developer with extensive programming experience and a deep understanding of system architecture, technical dependencies, and best practices.\n\n"
         "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
@@ -1199,7 +1269,7 @@ def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
         f"{stories_formatted}\n\n"
         "---\n"
         "### Instructions:\n"
-        "1. Perform the prioritization *five times*, revising priorities to account for changes in technical focus or new insights.\n"
+        f"1. Perform the prioritization *{rounds} times, revising priorities to account for changes in technical focus or new insights.\n"
         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"
@@ -1207,12 +1277,13 @@ def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
         "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
         "| Round  | Average Kendall Tau Distance |\n"
         "|--------|-----------------------------|\n"
-        "| Round 1 | X.XXX |\n"
-        "| Round 2 | Y.YYY |\n"
-        "| Round 3 | Z.ZZZ |\n"
-        "| Round 4 | A.AAA |\n"
-        "| Round 5 | B.BBB |\n\n"
+        f"{rounds_section}\n\n"
         "Analyze the consistency of rankings across rounds based on these values.\n\n"
+        "### Pairwise Kendall Tau Distance:\n"
+        "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
+        "| Round Pair | Kendall Tau Distance |\n"
+        "|------------|----------------------|\n"
+        f"{pairwise_section}\n\n"
         "### Final Output:\n"
         "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and technical alignment.\n"
         "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
@@ -1295,7 +1366,7 @@ def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
 #     return prompt
 
 
-def construct_solution_architect_prompt(data, vision, mvp, client_feedback=None):
+def construct_solution_architect_prompt(data, vision, mvp, rounds, client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
@@ -1307,6 +1378,18 @@ def construct_solution_architect_prompt(data, vision, mvp, client_feedback=None)
             "As you prioritize, consider the following feedback from the client:\n\n"
             + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
         )
+
+    rounds = int(rounds)
+
+    # Generate the rounds section dynamically based on num_rounds
+    rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
+    
+    # Generate the pairwise comparison section dynamically
+    pairwise_section = []
+    for i in range(rounds):
+        for j in range(i+1, rounds):
+            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+    pairwise_section = "\n".join(pairwise_section)
 
     prompt = (
         "You are an experienced Solution Architect known for designing scalable, efficient, and robust systems.\n\n"
@@ -1322,20 +1405,22 @@ def construct_solution_architect_prompt(data, vision, mvp, client_feedback=None)
         f"{stories_formatted}\n\n"
         "---\n"
         "### Instructions:\n"
-        "1. Perform the prioritization *five times*, revising priorities to reflect changes in architectural considerations such as scalability, performance, and integration.\n"
+        f"1. Perform the prioritization *{rounds} times, revising priorities to reflect changes in architectural considerations such as scalability, performance, and integration.\n"
         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"
         "### Average Kendall's Tau Distance:\n"
-        "After completing the five rounds, calculate the *average Kendall Tau distance* for each round.\n"
+        "After completing the rounds, calculate the *average Kendall Tau distance* for each round.\n"
         "Present the results in the following format:\n\n"
         "| Round | Average Kendall Tau Distance |\n"
         "|-------|----------------------------|\n"
-        "|   1   | X.XXX                      |\n"
-        "|   2   | Y.YYY                      |\n"
-        "|   3   | Z.ZZZ                      |\n"
-        "|   4   | A.AAA                      |\n"
-        "|   5   | B.BBB                      |\n\n"
+        f"{rounds_section}\n\n"
+         "Analyze the consistency of rankings across rounds based on these values.\n\n"
+        "### Pairwise Kendall Tau Distance:\n"
+        "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
+        "| Round Pair | Kendall Tau Distance |\n"
+        "|------------|----------------------|\n"
+        f"{pairwise_section}\n\n"
         "### Final Output:\n"
         "1. Return the *two best prioritizations* based on average Kendall Tau analysis and alignment with architectural goals.\n"
         "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"

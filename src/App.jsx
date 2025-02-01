@@ -79,6 +79,7 @@ const App = ({ result1, setResult1 }) => {
 	const [prioritizationTechnique, setPrioritizationTechnique] =
 		useState("100_Dollar");
 	const [selectModel, setSelectModel] = useState("gpt-3.5-turbo");
+	const [rounds, setRounds] = useState(10);
 	const [frameWork, setFromWork] = useState("INVEST framework");
 	const [frameWorkResult, setFrameWorkResult] = useState([]);
 	const [selectedFile, setSelectedFile] = useState(null);
@@ -724,6 +725,7 @@ const App = ({ result1, setResult1 }) => {
 						model: selectModel,
 						prioritization_type: prioritizationTechnique,
 						feedback: feedback,
+						rounds: rounds,
 					})
 				);
 			} else {
@@ -733,6 +735,7 @@ const App = ({ result1, setResult1 }) => {
 						model: selectModel,
 						prioritization_type: prioritizationTechnique,
 						feedback: feedback,
+						rounds: rounds,
 					})
 				);
 			}
@@ -2024,7 +2027,17 @@ const App = ({ result1, setResult1 }) => {
 															onChange={handleLanguage}
 															value={prioritizationTechnique}
 															options={labelOptions}
+											style={{ marginRight: " 10px" }}
+
 														/>
+													</Form.Item>
+													<Form.Item label="Rounds">
+													<Input
+											type="number"
+											value={rounds}
+											onChange={(e) => setRounds(e.target.value)}
+											style={{ margin: "0px 5px" }}
+										/>
 													</Form.Item>
 													<Form.Item
 														label="Model"
