@@ -2,19 +2,28 @@ import poIcon from "./assets/po.png";
 import saIcon from "./assets/SA.png";
 import developerIcon from "./assets/developer.png";
 import finalIcon from "./assets/final.png";
-// import defaultIcon from "./assets/default.png";
+import qaIcon from "./assets/qa.png";
+import caIcon from "./assets/ca.png";
+import seIcon from "./assets/se.png";
+import defaultIcon from "./assets/default.png";
 export const getChatMessageClass = (agentType) => {
     switch (agentType) {
       case "PO":
         return "chat-message-right";
-      case "Solution Architect":
+      case "SA":
         return "chat-message-left";
-      case "developer":
+      case "Developer":
         return "chat-message-center";
+      case "QA":
+        return "chat-message-center-1";
+      case "Compliance":
+        return "chat-message-center-2";
+      case "Security":
+        return "chat-message-center-3";
       case "Final Prioritization":
         return "chat-message-final";
-      // default:
-      //   return "";
+      default:
+        return "default-chat-message";
     }
   };
 
@@ -42,14 +51,20 @@ export const getChatMessageClass = (agentType) => {
     switch (agentType) {
       case "PO":
         return poIcon;
-      case "Solution Architect":
+      case "SA":
         return saIcon;
-      case "developer":
+      case "Developer":
         return developerIcon;
+      case "QA":
+        return qaIcon;
+      case "Compliance":
+        return caIcon;
+      case "Security":
+        return seIcon;
       case "Final Prioritization":
         return finalIcon;
-      // default:
-      //   return 'defaultIcon';
+      default:
+        return defaultIcon;
     }
   };
   

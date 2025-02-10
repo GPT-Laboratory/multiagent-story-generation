@@ -492,9 +492,9 @@ def process_role(input_content, image_url, model, headers, role, feedback):
     "Additional Guidance:\n"
     "- **Encourage atomic functionalities**: Create user stories for individual actions and small steps within each phase of the MVP.\n"
     "- **Ensure maximum detail**: Generate highly specific user stories that focus on even the smallest functionalities, such as scanning, logging in, generating reports, and handling errors.\n"
-    "- **At least 10 stories**: Ensure that a minimum of 10 user stories are generated to cover all major and minor aspects of the MVP.\n"
+    "- **At least 15 stories**: Ensure that a minimum of 15 user stories are generated to cover all major and minor aspects of the MVP.\n"
     "- **No upper limit**: Keep breaking down actions until all core and sub-tasks within the MVP are covered.\n\n"
-    "- **Remember At least 10 stories are must**: Ensure that a minimum of 10 user stories are generated to cover all major and minor aspects of the MVP.\n"
+    "- **Remember At least 15 stories are must**: Ensure that a minimum of 15 user stories are generated to cover all major and minor aspects of the MVP.\n"
 
     "Please use the following format for each story:\n"
     "### User Story X:\n"

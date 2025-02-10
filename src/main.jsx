@@ -7,6 +7,8 @@ import Layout from "./Layout";
 import "./App.css";
 import AddItem from "./AddItem";
 import { addKeyToResponse } from "./utilityFunctions";
+import Personas_list from "./helper/Personas_list";
+import Add_Personas from "./helper/Add_Personas";
 
 const Root = () => {
   const [result1, setResult1] = useState([]);
@@ -58,7 +60,25 @@ const Root = () => {
             </Layout>
           }
         />
-        
+
+        <Route
+          path="/add_agent"
+          element={
+            <Layout>
+              <Add_Personas />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/agent_list"
+          element={
+            <Layout>
+              <Personas_list />
+            </Layout>
+          }
+        />
+
       </Routes>
     </Router>
   );

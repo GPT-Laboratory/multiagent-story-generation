@@ -465,24 +465,54 @@ def ensure_unique_keys(stories):
     return stories
 
 
-async def estimate_wsjf(data, websocket, model, topic_response, context_response):
+async def estimate_wsjf_final_Prioritization(data, stories, websocket, model):
     headers = {
         "Authorization": f"Bearer {random.choice(api_keys)}",
         "Content-Type": "application/json"
     }
     
-    prioritize_prompt = construct_batch_wsjf_prompt(data, topic_response, context_response)
+    # prioritize_prompt = construct_batch_wsjf_prompt(data, topic_response, context_response)
     #logger.info(f"Prioritize Prompt:\n{prioritize_prompt}")  # Debugging print
-    estimated_factors = await send_to_llm(prioritize_prompt, headers, model)
-    await stream_response_word_by_word(websocket, estimated_factors, "Final Prioritization")
+    estimated_factors = await send_to_llm(data, headers, model)
+    # await stream_response_word_by_word(websocket, estimated_factors, "Final Prioritization")
     #logger.info(f"Estimated Factor:\n{estimated_factors}")
+
+    print("Estimated Factors list: ", estimated_factors)
     
     wsjf_factors = parse_wsjf_response(estimated_factors)
     logger.info(f"wsjf_factors Factor:\n{wsjf_factors}")
+
+    print("WSJF Factors list: ", wsjf_factors)
     
 
-    enriched_stories = enrich_original_stories_with_wsjf(data, wsjf_factors)
-    logger.info(f"wsjf_factors Factor:\n{enriched_stories}")
+    enriched_stories = enrich_original_stories_with_wsjf_final_prioritization(stories, wsjf_factors)
+    logger.info(f"wsjf_factors Factor enrich:\n{enriched_stories}")
+
+    return enriched_stories
+    
+
+async def estimate_wsjf(data, stories, websocket, model):
+    headers = {
+        "Authorization": f"Bearer {random.choice(api_keys)}",
+        "Content-Type": "application/json"
+    }
+    
+    # prioritize_prompt = construct_batch_wsjf_prompt(data, topic_response, context_response)
+    #logger.info(f"Prioritize Prompt:\n{prioritize_prompt}")  # Debugging print
+    estimated_factors = await send_to_llm(data, headers, model)
+    # await stream_response_word_by_word(websocket, estimated_factors, "Final Prioritization")
+    #logger.info(f"Estimated Factor:\n{estimated_factors}")
+
+    print("Estimated Factors list: ", estimated_factors)
+    
+    wsjf_factors = parse_wsjf_response(estimated_factors)
+    logger.info(f"wsjf_factors Factor:\n{wsjf_factors}")
+
+    print("WSJF Factors list: ", wsjf_factors)
+    
+
+    enriched_stories = enrich_original_stories_with_wsjf(stories, wsjf_factors)
+    logger.info(f"wsjf_factors Factor enrich:\n{enriched_stories}")
 
     return enriched_stories
     
@@ -551,26 +581,30 @@ def construct_batch_wsjf_prompt(stories, topic_response, context_response):
 
 def parse_wsjf_response(response_text):
     pattern = re.compile(
-        r"- Story ID (\d+): \(Epic: .+?\)\n"  # Capture the story ID and the epic
-        r"\s+- Business Value \(BV\): (\d+)\n"  # Capture Business Value
-        r"\s+- Time Criticality \(TC\): (\d+)\n"  # Capture Time Criticality
-        r"\s+- Risk Reduction/Opportunity Enablement \(RR/OE\): (\d+)\n"  # Capture Risk Reduction/Opportunity Enablement
-        r"\s+- Job Size \(JS\): (\d+)"  # Capture Job Size
+        r"- Story ID (\d+): \(Epic: .+?\)\s*"
+        r"- Business Value \(BV\): (\d+)\s*"
+        r"- Time Criticality \(TC\): (\d+)\s*"
+        r"- Risk Reduction/Opportunity Enablement \(RR/OE\): (\d+)\s*"
+        r"- Job Size \(JS\): (\d+)\s*"
+        r"- WSJF Score: ([\d.]+)\s*"
     )
 
     wsjf_factors = []
+    
     for match in pattern.finditer(response_text):
-        story_id, bv, tc, rr_oe, js = match.groups()
+        story_id, bv, tc, rr_oe, js, wsjf_score = match.groups()
+
         wsjf_factors.append({
             'story_id': int(story_id),
             'wsjf_factors': {
                 'BV': int(bv),
                 'TC': int(tc),
                 'RR/OE': int(rr_oe),
-                'JS': int(js)
-            }
+                'JS': int(js),
+            },
+            'wsjf_score': float(wsjf_score)
         })
-
+    
     return wsjf_factors
 
 def validate_wsjf_response(wsjf_factors, stories):
@@ -580,6 +614,53 @@ def validate_wsjf_response(wsjf_factors, stories):
     if story_ids == response_story_ids:
         return True
     return False
+
+# def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
+#     wsjf_dict = {factor['story_id']: factor['wsjf_factors'] for factor in wsjf_factors}
+#     logger.info(f"Original stories:\n{original_stories}")
+#     logger.info(f"WSJF factors dictionary:\n{wsjf_dict}")
+
+#     enriched_stories = []
+#     for story in original_stories:
+#         story_id = story['key']
+#         if story_id in wsjf_dict:
+#             wsjf_data = wsjf_dict[story_id]
+#             story['wsjf_factors'] = wsjf_data
+#             bv = wsjf_data['BV']
+#             tc = wsjf_data['TC']
+#             rr_oe = wsjf_data['RR/OE']
+#             js = wsjf_data['JS']
+#             wsjf_score = (bv + tc + rr_oe) / js if js != 0 else 0  # Prevent division by zero
+#             story['wsjf_score'] = wsjf_score
+#             story['bv'] = bv
+#             story['tc'] = tc
+#             story['oe'] = rr_oe
+#             story['js'] =  js 
+
+#             logger.info(f"Story ID {story_id} WSJF factors: {wsjf_data}, WSJF score: {wsjf_score}")
+#         else:
+#             story['wsjf_factors'] = {
+#                 'BV': 0,
+#                 'TC': 0,
+#                 'RR/OE': 0,
+#                 'JS': 0
+#             }
+#             story['wsjf_score'] = 0
+#             story['bv'] = 0
+#             story['tc'] = 0
+#             logger.warning(f"Story ID {story_id} not found in WSJF factors")
+
+#         enriched_stories.append(story)
+
+#     # enriched_stories = sort_stories_by_wsjf_in_place(enriched_stories)
+#     sorted_stories = sort_stories_by_wsjf_in_place(enriched_stories)
+
+#     # Return two arrays with the same enriched stories
+#     array_one = sorted_stories
+#     array_two = sorted_stories
+#     # return enriched_stories
+#     return array_one, array_two
+
 
 def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
     wsjf_dict = {factor['story_id']: factor['wsjf_factors'] for factor in wsjf_factors}
@@ -601,7 +682,7 @@ def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
             story['bv'] = bv
             story['tc'] = tc
             story['oe'] = rr_oe
-            story['js'] =  js 
+            story['js'] = js 
 
             logger.info(f"Story ID {story_id} WSJF factors: {wsjf_data}, WSJF score: {wsjf_score}")
         else:
@@ -618,8 +699,57 @@ def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
 
         enriched_stories.append(story)
 
+    # Sort the enriched stories by WSJF score
+    sorted_stories = sort_stories_by_wsjf_in_place(enriched_stories)
+
+    # Return two arrays with the same enriched stories
+    array_one = sorted_stories
+    array_two = sorted_stories
+
+    return array_one, array_two
+
+
+def enrich_original_stories_with_wsjf_final_prioritization(original_stories, wsjf_factors):
+    wsjf_dict = {factor['story_id']: factor['wsjf_factors'] for factor in wsjf_factors}
+    logger.info(f"Original stories:\n{original_stories}")
+    logger.info(f"WSJF factors dictionary:\n{wsjf_dict}")
+
+    enriched_stories = []
+    for story in original_stories:
+        story_id = story['key']
+        if story_id in wsjf_dict:
+            wsjf_data = wsjf_dict[story_id]
+            story['wsjf_factors'] = wsjf_data
+            bv = wsjf_data['BV']
+            tc = wsjf_data['TC']
+            rr_oe = wsjf_data['RR/OE']
+            js = wsjf_data['JS']
+            wsjf_score = (bv + tc + rr_oe) / js if js != 0 else 0  # Prevent division by zero
+            story['wsjf_score'] = wsjf_score
+            story['bv'] = bv
+            story['tc'] = tc
+            story['oe'] = rr_oe
+            story['js'] = js 
+
+            logger.info(f"Story ID {story_id} WSJF factors: {wsjf_data}, WSJF score: {wsjf_score}")
+        else:
+            story['wsjf_factors'] = {
+                'BV': 0,
+                'TC': 0,
+                'RR/OE': 0,
+                'JS': 0
+            }
+            story['wsjf_score'] = 0
+            story['bv'] = 0
+            story['tc'] = 0
+            logger.warning(f"Story ID {story_id} not found in WSJF factors")
+
+        enriched_stories.append(story)
+
+    # Sort the enriched stories by WSJF score
     enriched_stories = sort_stories_by_wsjf_in_place(enriched_stories)
     return enriched_stories
+
 
 def sort_stories_by_wsjf_in_place(enriched_stories):
     return sorted(enriched_stories, key=lambda story: story.get('wsjf_score', 0), reverse=True)
@@ -911,154 +1041,13 @@ async def stream_response_word_by_word(websocket, response, agent_type, delay=0.
         await asyncio.sleep(delay)  # Delay to simulate streaming effect  
 
 
-# def construct_product_owner_prompt(data,  vision, mvp, client_feedback=None):
-#     stories_formatted = '\n'.join([
-#         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
-#         for index, story in enumerate(data['stories'])
-#     ])
-
-#     feedback_section = ""
-#     if client_feedback:
-#         feedback_section = "As you prioritize, consider the following feedback provided by the client:\n\n" + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
-
-#     print("Formatted Stories:")
-#     print(stories_formatted)
-#     if feedback_section:
-#         print("Client Feedback:")
-#         print(feedback_section)
-
-#     prompt = (
-#     "You are a Product Owner with extensive experience in product management, prioritization, and a deep understanding of business value, customer needs, and market impact.\n\n"
-#     "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
-#     f"### Product Vision:\n{vision}\n\n"
-#     f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
-#     f"{feedback_section}"
-#     "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
-#     "Ensure the total equals exactly 100 dollars. Use this format:\n"
-#     "- ID X: Y dollars\n"
-#     "- ID Z: W dollars\n\n"
-#     "Here are the stories:\n\n"
-#     f"{stories_formatted}\n\n"
-#     "---\n"
-#     "### Instructions:\n"
-#     "1. Perform the prioritization *five times*, revising priorities to account for changes in business goals or new insights.\n"
-#     "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
-#     "- ID X: Y dollars\n"
-#     "- ID Z: W dollars\n\n"
-#     "### Comparison:\n"
-#     "After completing the five rounds, calculate the *Kendall Tau correlation* for all pairs of rounds (e.g., Round 1 vs. Round 2, Round 1 vs. Round 3, etc.).\n"
-#     "Analyze the consistency of rankings across rounds based on Kendall Tau values.\n\n"
-#     "### Final Output:\n"
-#     "1. Return the *two best prioritizations* based on Kendall Tau analysis and alignment with business goals.\n"
-#     "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
-#     "- ID X: Y dollars\n"
-#     "- ID Z: W dollars\n\n"
-#     "**Prioritization 1:**\n"
-#     "- ID 1: X dollars\n"
-#     "- ID 2: Y dollars\n"
-#     "...\n"
-#     "**Prioritization 2:**\n"
-#     "- ID 1: A dollars\n"
-#     "- ID 2: B dollars\n\n"
-#     "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
-#     "- How Kendall Tau results influenced the selection.\n"
-#     "- Observed trends or consistencies in the rankings.\n"
-#     "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
-# )
-
-
-
-#     return prompt
-
-
-# def construct_product_owner_prompt(data, vision, mvp, client_feedback=None):
-#     stories_formatted = '\n'.join([
-#         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
-#         for index, story in enumerate(data['stories'])
-#     ])
-
-#     feedback_section = ""
-#     if client_feedback:
-#         feedback_section = "As you prioritize, consider the following feedback provided by the client:\n\n" + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
-
-#     print("Formatted Stories:")
-#     print(stories_formatted)
-#     if feedback_section:
-#         print("Client Feedback:")
-#         print(feedback_section)
-
-#     prompt = (
-#     "You are a Product Owner with extensive experience in product management, prioritization, and a deep understanding of business value, customer needs, and market impact.\n\n"
-#     "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
-#     f"### Product Vision:\n{vision}\n\n"
-#     f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
-#     f"{feedback_section}"
-#     "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
-#     "Ensure the total equals exactly 100 dollars. Use this format:\n"
-#     "- ID X: Y dollars\n"
-#     "- ID Z: W dollars\n\n"
-#     "Here are the stories:\n\n"
-#     f"{stories_formatted}\n\n"
-#     "---\n"
-#     "### Instructions:\n"
-#     "1. Perform the prioritization *five times*, revising priorities to account for changes in business goals or new insights.\n"
-#     "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
-#     "- ID X: Y dollars\n"
-#     "- ID Z: W dollars\n\n"
-#     "### Average Kendall Tau Distance:\n"
-#     "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
-#     "| Round  | Average Kendall Tau Distance |\n"
-#     "|--------|-----------------------------|\n"
-#     "| Round 1 | X.XXX |\n"
-#     "| Round 2 | Y.YYY |\n"
-#     "| Round 3 | Z.ZZZ |\n"
-#     "| Round 4 | A.AAA |\n"
-#     "| Round 5 | B.BBB |\n\n"
-#     "Analyze the consistency of rankings across rounds based on these values.\n\n"
-#     "### Pairwise Kendall Tau Distance:\n"
-#     "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
-#     "| Round Pair | Kendall Tau Distance |\n"
-#     "|------------|----------------------|\n"
-#     "| Round 1 vs Round 2 | X.XXX |\n"
-#     "| Round 1 vs Round 3 | Y.YYY |\n"
-#     "| Round 1 vs Round 4 | Z.ZZZ |\n"
-#     "| Round 1 vs Round 5 | A.AAA |\n"
-#     "| Round 2 vs Round 3 | B.BBB |\n"
-#     "| Round 2 vs Round 4 | C.CCC |\n"
-#     "| Round 2 vs Round 5 | D.DDD |\n"
-#     "| Round 3 vs Round 4 | E.EEE |\n"
-#     "| Round 3 vs Round 5 | F.FFF |\n"
-#     "| Round 4 vs Round 5 | G.GGG |\n\n"
-#     "### Final Output:\n"
-#     "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
-#     "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
-#     "- ID X: Y dollars\n"
-#     "- ID Z: W dollars\n\n"
-#     "**Prioritization 1:**\n"
-#     "- ID 1: X dollars\n"
-#     "- ID 2: Y dollars\n"
-#     "...\n"
-#     "**Prioritization 2:**\n"
-#     "- ID 1: A dollars\n"
-#     "- ID 2: B dollars\n\n"
-#     "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
-#     "- How the average Kendall Tau results influenced the selection.\n"
-#     "- Observed trends or consistencies in the rankings.\n"
-#     "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
-#     )
-
-
-#     return prompt
-
-
-
-def construct_product_owner_prompt(data, vision, mvp, rounds, client_feedback=None):
+def construct_product_owner_prompt(data, vision, mvp, rounds, first_agent_name, first_agent_prompt, client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
     ])
 
-
+    print("first_agent_prompt_is:", first_agent_prompt)
 
     feedback_section = ""
     if client_feedback:
@@ -1084,51 +1073,53 @@ def construct_product_owner_prompt(data, vision, mvp, rounds, client_feedback=No
             pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
     pairwise_section = "\n".join(pairwise_section)
 
+
     prompt = (
-    "You are a Product Owner with extensive experience in product management, prioritization, and a deep understanding of business value, customer needs, and market impact.\n\n"
-    "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
-    f"### Product Vision:\n{vision}\n\n"
-    f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
-    f"{feedback_section}"
-    "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
-    "Ensure the total equals exactly 100 dollars. Use this format:\n"
-    "- ID X: Y dollars\n"
-    "- ID Z: W dollars\n\n"
-    "Here are the stories:\n\n"
-    f"{stories_formatted}\n\n"
-    "---\n"
-    "### Instructions:\n"
-    f"1. Perform the prioritization *{rounds} times*, revising priorities to account for changes in business goals or new insights.\n"
-    "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
-    "- ID X: Y dollars\n"
-    "- ID Z: W dollars\n\n"
-    "### Average Kendall Tau Distance:\n"
-    "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
-    "| Round  | Average Kendall Tau Distance |\n"
-    "|--------|-----------------------------|\n"
-    f"{rounds_section}\n\n"
-    "Analyze the consistency of rankings across rounds based on these values.\n\n"
-    "### Pairwise Kendall Tau Distance:\n"
-    "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
-    "| Round Pair | Kendall Tau Distance |\n"
-    "|------------|----------------------|\n"
-    f"{pairwise_section}\n\n"
-    "### Final Output:\n"
-    "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
-    "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
-    "- ID X: Y dollars\n"
-    "- ID Z: W dollars\n\n"
-    "**Prioritization 1:**\n"
-    "- ID 1: X dollars\n"
-    "- ID 2: Y dollars\n"
-    "...\n"
-    "**Prioritization 2:**\n"
-    "- ID 1: A dollars\n"
-    "- ID 2: B dollars\n\n"
-    "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
-    "- How the average Kendall Tau results influenced the selection.\n"
-    "- Observed trends or consistencies in the rankings.\n"
-    "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
+        f"You are {first_agent_name}.\n\n"
+        f"{first_agent_prompt}\n\n"
+        "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
+        f"### Product Vision:\n{vision}\n\n"
+        f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
+        f"{feedback_section}"
+        "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
+        "Ensure the total equals exactly 100 dollars. Use this format:\n"
+        "- ID X: Y dollars\n"
+        "- ID Z: W dollars\n\n"
+        "Here are the stories:\n\n"
+        f"{stories_formatted}\n\n"
+        "---\n"
+        "### Instructions:\n"
+        f"1. Perform the prioritization *{rounds} times*, revising priorities to account for changes in business goals or new insights.\n"
+        "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
+        "- ID X: Y dollars\n"
+        "- ID Z: W dollars\n\n"
+        "### Average Kendall Tau Distance:\n"
+        "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
+        "| Round  | Average Kendall Tau Distance |\n"
+        "|--------|-----------------------------|\n"
+        f"{rounds_section}\n\n"
+        "Analyze the consistency of rankings across rounds based on these values.\n\n"
+        "### Pairwise Kendall Tau Distance:\n"
+        "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
+        "| Round Pair | Kendall Tau Distance |\n"
+        "|------------|----------------------|\n"
+        f"{pairwise_section}\n\n"
+        "### Final Output:\n"
+        "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
+        "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
+        "- ID X: Y dollars\n"
+        "- ID Z: W dollars\n\n"
+        "**Prioritization 1:**\n"
+        "- ID 1: X dollars\n"
+        "- ID 2: Y dollars\n"
+        "...\n"
+        "**Prioritization 2:**\n"
+        "- ID 1: A dollars\n"
+        "- ID 2: B dollars\n\n"
+        "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
+        "- How the average Kendall Tau results influenced the selection.\n"
+        "- Observed trends or consistencies in the rankings.\n"
+        "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
     )
 
     return prompt
@@ -1224,7 +1215,7 @@ def construct_product_owner_prompt(data, vision, mvp, rounds, client_feedback=No
 
 
 
-def construct_senior_developer_prompt(data, vision, mvp, rounds, client_feedback=None):
+def construct_senior_developer_prompt(data, vision, mvp, rounds, second_agent_name, second_agent_prompt,  client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
@@ -1256,7 +1247,8 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, client_feedback
     pairwise_section = "\n".join(pairwise_section)
 
     prompt = (
-        "You are a Senior Developer with extensive programming experience and a deep understanding of system architecture, technical dependencies, and best practices.\n\n"
+        f"You are {second_agent_name}.\n\n"
+        f"{second_agent_prompt}\n\n"
         "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
         f"### Product Vision:\n{vision}\n\n"
         f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
@@ -1269,7 +1261,7 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, client_feedback
         f"{stories_formatted}\n\n"
         "---\n"
         "### Instructions:\n"
-        f"1. Perform the prioritization *{rounds} times, revising priorities to account for changes in technical focus or new insights.\n"
+        f"1. Perform the prioritization *{rounds} times*, revising priorities to account for changes in technical focus or new insights.\n"
         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"
@@ -1301,7 +1293,7 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, client_feedback
         "- Observed trends or consistencies in the rankings.\n"
         "- How these prioritizations minimize technical risk and optimize system architecture, dependencies, and project flow."
     )
-    
+
     return prompt
 
 
@@ -1366,7 +1358,7 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, client_feedback
 #     return prompt
 
 
-def construct_solution_architect_prompt(data, vision, mvp, rounds, client_feedback=None):
+def construct_solution_architect_prompt(data, vision, mvp, rounds, third_agent_name, third_agent_prompt, client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
@@ -1392,7 +1384,8 @@ def construct_solution_architect_prompt(data, vision, mvp, rounds, client_feedba
     pairwise_section = "\n".join(pairwise_section)
 
     prompt = (
-        "You are an experienced Solution Architect known for designing scalable, efficient, and robust systems.\n\n"
+        f"You are {third_agent_name}.\n\n"
+        f"{third_agent_prompt}\n\n"
         "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
         f"### Product Vision:\n{vision}\n\n"
         f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
@@ -1405,7 +1398,7 @@ def construct_solution_architect_prompt(data, vision, mvp, rounds, client_feedba
         f"{stories_formatted}\n\n"
         "---\n"
         "### Instructions:\n"
-        f"1. Perform the prioritization *{rounds} times, revising priorities to reflect changes in architectural considerations such as scalability, performance, and integration.\n"
+        f"1. Perform the prioritization *{rounds} times*, revising priorities to reflect changes in architectural considerations such as scalability, performance, and integration.\n"
         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"

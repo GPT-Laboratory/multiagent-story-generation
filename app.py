@@ -23,7 +23,9 @@ from httpx import AsyncClient, Timeout, request
 from fastapi import FastAPI, Path, UploadFile, File, Form, websockets 
 from fastapi.responses import JSONResponse 
 import random
-import pdfplumber 
+import pdfplumber
+
+from personas import add_persona, delete_persona, get_personas, update_persona 
 
 app = FastAPI()
 
@@ -31,13 +33,16 @@ app = FastAPI()
 load_dotenv()
 
 from helpers import (
-    construct_product_owner_prompt, construct_senior_developer_prompt, construct_solution_architect_prompt, extract_text_from_pdf, get_random_temperature, construct_greetings_prompt, construct_topic_prompt,
+    construct_product_owner_prompt, construct_senior_developer_prompt, construct_solution_architect_prompt, estimate_wsjf_final_Prioritization, extract_text_from_pdf, get_random_temperature, construct_greetings_prompt, construct_topic_prompt,
     construct_context_prompt, construct_batch_100_dollar_prompt, parse_100_dollar_response, 
     validate_dollar_distribution, enrich_agents_stories_with_dollar_distribution, enrich_stories_with_dollar_distribution,
     construct_stories_formatted, ensure_unique_keys, estimate_wsjf, estimate_moscow, 
     save_uploaded_file, parse_csv_to_json, estimate_kano, estimate_ahp, send_to_llm, send_to_llm_for_img
 )
-
+from wsjf_helper import (
+    construct_wsjf_agent_1_prompt, construct_batch_wsjf_prompt_product_owner, construct_second_agent_wsjf_prompt,
+    construct_third_agent_wsjf_prompt, prioritize_stories_with_wsjf
+)
 from table_helper import(
      get_best_stories, construct_batch_100_dollar_prompt_qa
 )
@@ -98,6 +103,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 sa_weight = selected_weights.get("sa")
                 dev_weight = selected_weights.get("dev")
                 finalPrioritization = data.get("finalPrioritization")
+                agents = data.get("agents")
                 print(f"po_weight: {po_weight}")
                 print(f"sa_weight: {sa_weight}")
                 print(f"dev_weight: {dev_weight}")
@@ -106,7 +112,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if finalPrioritization is not True:
                     # Handle the original sendInput function's workflow
                     await run_agents_workflow(
-                        stories,vision, mvp, prioritization_type, model, client_feedback, websocket, rounds
+                        stories,vision, mvp, prioritization_type, model, client_feedback, websocket, rounds, agents
                     )
                 else:
                     # Handle the new sendInputData function's workflow
@@ -121,7 +127,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         po_weight,
                         sa_weight,
                         dev_weight,
-                        rounds
+                       
                     )
                 # await run_agents_workflow(stories, prioritization_type, model, client_feedback, websocket)
     except WebSocketDisconnect:
@@ -132,100 +138,139 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # client_feedback=""
-async def run_agents_workflow(stories, vision, mvp, prioritization_type, model, client_feedback, websocket, rounds):
+async def run_agents_workflow(stories, vision, mvp, prioritization_type, model, client_feedback, websocket, rounds, agents):
    
     # Step 1: Greetings
-    greetings_prompt = construct_product_owner_prompt({"stories": stories}, vision, mvp, rounds, client_feedback )
+   
+    print("Agents data:", agents)
+    first_agent = agents[0]
+    second_agent = agents[1]
+    third_agent = agents[2]
+    first_agent_name = first_agent.get("role")
+    first_agent_prompt = first_agent.get("prioritization")
+    first_agent_role = first_agent.get("name")
 
 
-    greetings_response = await engage_agents(greetings_prompt, websocket, "PO", model)
-
-    PO_rounds = construct_batch_100_dollar_prompt_product_owner({"stories": stories}, greetings_response )
-    
-    best_PO_rounds = await engage_all_agents_in_prioritization(PO_rounds, stories, websocket, model)
-
-    await websocket.send_json({
-            "agentType": "Best product owner rounds", 
-            # "message": best_rounds,
-            "message": {
-        "round_one": best_PO_rounds[0],
-        "round_two": best_PO_rounds[1]
-    }
-    })
+    second_agent_name = second_agent.get("role")
+    second_agent_prompt = second_agent.get("prioritization")
+    second_agent_role = second_agent.get("name")
 
 
-    
-    # Debug: Print what we're sending to frontend
-    print("Sending to frontend:", {
-        "agentType": "Best product owner stories", 
-        "message": greetings_response
-    })
-    
-    # await websocket.send_json({
-    #     "agentType": "Best product owner stories", 
-    #     "message": greetings_response
-    # })
+    third_agent_name = third_agent.get("role")
+    third_agent_prompt = third_agent.get("prioritization")
+    third_agent_role = third_agent.get("name")
 
-    try:
-        # Log the raw response for debugging
-        logger.info(f"Raw greetings response: {greetings_response}")
 
-        # # Improved parsing logic
-        # greetings = greetings_response.split("2. ")
-        # pekka_greeting = greetings[0].strip()
-        # remaining_greetings = greetings[1].split("3. ")
-        # sami_greeting = remaining_greetings[0].strip()
-        # zeeshan_greeting = remaining_greetings[1].strip()
+    if prioritization_type == "100_DOLLAR":
 
-        # Send greetings with delay
-        # stream_response_word_by_word(websocket, greetings_response, "PO")
-        #await asyncio.sleep(1)  # Delay of 1 second between greetings
+        greetings_prompt = construct_product_owner_prompt({"stories": stories}, vision, mvp, rounds, first_agent_name, first_agent_prompt, client_feedback )
+        # greetings_response = await engage_agents(greetings_prompt, websocket, "PO", model)
+        greetings_response = await engage_agents(greetings_prompt, websocket, first_agent_role, model)
+        # Debug: Print what we're sending to frontend
+        print("Sending to frontend:", {
+            "agentType": "Best product owner stories", 
+            "message": greetings_response
+        })
+        # Step 2: Topic Introduction
+        topic_prompt = construct_senior_developer_prompt({"stories": stories}, vision, mvp, rounds, second_agent_name, second_agent_prompt, client_feedback )    #logger.info(f"topic_prompt : {topic_prompt}")
         
-        #await stream_response_word_by_word(websocket, sami_greeting, "QA")
-        #await asyncio.sleep(1)  # Delay of 1 second between greetings
+        # Step 3: Context and Discussion
+        context_prompt = construct_solution_architect_prompt({"stories": stories}, vision, mvp, rounds, third_agent_name, third_agent_prompt, client_feedback ) 
         
-        #await stream_response_word_by_word(websocket, zeeshan_greeting, "developer")
-    except Exception as e:
-        logger.error(f"Error parsing greetings response: {greetings_response}")
-        logger.error(f"Exception: {e}")
-        #await websocket.send_json({"agentType": "error", "message": "Error parsing greetings response. Please try again later."})
+        # Run Step 2 and Step 3 concurrently
+        topic_response, context_response = await asyncio.gather(
+            engage_agents(topic_prompt, websocket, second_agent_role, model),
+            engage_agents(context_prompt, websocket, third_agent_role, model)
+        )
 
-     # Step 2: Topic Introduction
-    topic_prompt = construct_senior_developer_prompt({"stories": stories}, vision, mvp, rounds, client_feedback )    #logger.info(f"topic_prompt : {topic_prompt}")
-    
-    # Step 3: Context and Discussion
-    context_prompt = construct_solution_architect_prompt({"stories": stories}, vision, mvp, rounds, client_feedback ) 
-    
-    # Run Step 2 and Step 3 concurrently
-    topic_response, context_response = await asyncio.gather(
-        engage_agents(topic_prompt, websocket, "Solution Architect", model),
-        engage_agents(context_prompt, websocket, "developer", model)
-    )
 
-    SA_rounds = construct_batch_100_dollar_prompt_solution_architect({"stories": stories}, topic_response )
-    
-    best_SA_rounds = await engage_all_agents_in_prioritization(SA_rounds, stories, websocket, model)
 
-    await websocket.send_json({
-            "agentType": "Best solution architect rounds", 
-            # "message": best_rounds,
-            "message": {
-        "round_one": best_SA_rounds[0],
-        "round_two": best_SA_rounds[1]
-    }
-    })
-    developer_rounds = construct_batch_100_dollar_prompt_developer({"stories": stories}, context_response )
-    
-    best_developer_rounds = await engage_all_agents_in_prioritization(developer_rounds, stories, websocket, model)
+        PO_rounds = construct_batch_100_dollar_prompt_product_owner({"stories": stories}, greetings_response )
+        best_PO_rounds = await engage_all_agents_in_prioritization(PO_rounds, stories, websocket, model)
+        await websocket.send_json({
+                "agentType": "Best product owner rounds", 
+                # "message": best_rounds,
+                "message": {
+            "round_one": best_PO_rounds[0],
+            "round_two": best_PO_rounds[1]
+        }
+        })
 
-    await websocket.send_json({
-            "agentType": "Best developer rounds", 
-            # "message": best_rounds,
-            "message": {
-        "round_one": best_developer_rounds[0],
-        "round_two": best_developer_rounds[1]
-    }
-    })
+        SA_rounds = construct_batch_100_dollar_prompt_solution_architect({"stories": stories}, topic_response )
+        best_SA_rounds = await engage_all_agents_in_prioritization(SA_rounds, stories, websocket, model)
+        await websocket.send_json({
+                "agentType": "Best solution architect rounds", 
+                # "message": best_rounds,
+                "message": {
+            "round_one": best_SA_rounds[0],
+            "round_two": best_SA_rounds[1]
+        }
+        })
+
+        developer_rounds = construct_batch_100_dollar_prompt_developer({"stories": stories}, context_response )
+        best_developer_rounds = await engage_all_agents_in_prioritization(developer_rounds, stories, websocket, model)
+        await websocket.send_json({
+                "agentType": "Best developer rounds", 
+                # "message": best_rounds,
+                "message": {
+            "round_one": best_developer_rounds[0],
+            "round_two": best_developer_rounds[1]
+        }
+        })
+
+    elif prioritization_type == "WSJF":
+        print("WSJF working")
+        agent_1_prompt =  construct_wsjf_agent_1_prompt({"stories": stories}, vision, mvp, rounds, first_agent_name, first_agent_prompt, client_feedback)
+        wsjf_greetings_response = await engage_agents(agent_1_prompt, websocket, first_agent_name, model)
+        # Debug: Print what we're sending to frontend
+        print("Sending to frontend:", {
+            "agentType": "Best product owner stories", 
+            "message": wsjf_greetings_response
+        })
+        agent_1_rounds = construct_batch_wsjf_prompt_product_owner({"stories": stories}, wsjf_greetings_response )
+        best_agent_1_rounds = await estimate_wsjf(agent_1_rounds, stories, websocket, model)
+        await websocket.send_json({
+                "agentType": "Best product owner rounds", 
+                # "message": best_rounds,
+                "message": {
+            "round_one": best_agent_1_rounds[0],
+            "round_two": best_agent_1_rounds[1]
+        }
+        })
+        
+        # 2nd and 3rd agent consequent rounds
+        agent_2_prompt =  construct_second_agent_wsjf_prompt({"stories": stories}, vision, mvp, rounds, second_agent_name, second_agent_prompt, client_feedback=None)
+        agent_3_prompt =  construct_third_agent_wsjf_prompt({"stories": stories}, vision, mvp, rounds, second_agent_name, second_agent_prompt, client_feedback=None)
+        # Run Step 2 and Step 3 concurrently
+        topic_response_agent_2, context_response_agent_3 = await asyncio.gather(
+            engage_agents(agent_2_prompt, websocket, second_agent_name, model),
+            engage_agents(agent_3_prompt, websocket, third_agent_name, model)
+        )
+        
+        # 2nd Agent Progress
+        agent_2_rounds = construct_batch_wsjf_prompt_product_owner({"stories": stories}, topic_response_agent_2 )
+        best_agent_2_rounds = await estimate_wsjf(agent_2_rounds, stories, websocket, model)
+        await websocket.send_json({
+                "agentType": "Best solution architect rounds", 
+                # "message": best_rounds,
+                "message": {
+            "round_one": best_agent_2_rounds[0],
+            "round_two": best_agent_2_rounds[1]
+        }
+        })
+
+        # 3rd Agent Progress
+        agent_3_rounds = construct_batch_wsjf_prompt_product_owner({"stories": stories}, context_response_agent_3 )
+        best_agent_3_rounds = await estimate_wsjf(agent_3_rounds, stories, websocket, model)
+        await websocket.send_json({
+                "agentType": "Best developer rounds", 
+                # "message": best_rounds,
+                "message": {
+            "round_one": best_agent_3_rounds[0],
+            "round_two": best_agent_3_rounds[1]
+        }
+        })
+    
     # Send QA and Developer best stories
     # if qa_best_stories:
     #     await websocket.send_json({
@@ -424,13 +469,22 @@ async def engage_agents_in_prioritization(prompt, stories, websocket, model, max
 async def handle_final_prioritization_workflow(
     stories, prioritization_type, model, websocket, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight
 ):
-    # Weighted prioritization
-    prioritize_weight_prompt = await prioritize_stories_with_weightage(
-        stories, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight
-    )
-
-    prioritized_stories = await engage_agents_in_prioritization(prioritize_weight_prompt, stories, websocket, model)  # Assuming `engage_agents_in_prioritization` interacts with OpenAI API
     
+    if prioritization_type == "100_DOLLAR":
+        # Step 4: Prioritization
+        prioritize_weight_prompt = await prioritize_stories_with_weightage(
+            stories, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight
+        )
+
+        prioritized_stories = await engage_agents_in_prioritization(prioritize_weight_prompt, stories, websocket, model)
+    elif prioritization_type == "WSJF":
+        prioritize_weight_prompt = await prioritize_stories_with_wsjf(
+            stories, product_owner_data, solution_architect_data, developer_data, po_weight, sa_weight, dev_weight
+        )
+
+        prioritized_stories = await estimate_wsjf_final_Prioritization(prioritize_weight_prompt, stories, websocket, model)
+
+
     # Step 6: Final Output in table
     await asyncio.sleep(1)  # Delay of 1 second between greetings
     await websocket.send_json({"agentType": "Final_output_into_table", "message": prioritized_stories, "prioritization_type": prioritization_type})
@@ -545,6 +599,14 @@ async def generate_user_stories(request: Request):
     feedback = data['feedback']
     request_id = data.get("request_id")
     context_image = data.get("context_image")
+    agents = data.get("agents")
+
+
+    # print("agents datata", agents)
+    roles = [agent["role"] for agent in agents]
+
+    print("rolesahah",roles)  
+    # return
 
 
     print(f"feedback: {feedback}")
@@ -561,7 +623,7 @@ async def generate_user_stories(request: Request):
             print(f"Decoded image size: {len(image_data)} bytes")
     
     # Define the roles in sequence
-    roles = ["PO", "SA", "Security", "Compliance"]
+    # roles = ["PO", "SA", "Security", "Compliance"]
 
     # Initial input to the first role (PO) is based on the original data
     input_content = {
@@ -753,13 +815,14 @@ app = Starlette(debug=True, middleware=[
     Route('/api/generate-user-stories-by-files', generate_user_stories_by_files, methods=['POST']),
     Route('/api/upload-csv', upload_csv, methods=['POST']),
     Route('/api/check-user-stories-quality', check_user_stories_quality, methods=['POST']),
+    Route('/api/personas', get_personas, methods=['Get']),
+    Route("/api/add-personas", add_persona, methods=["POST"]),
+    Route("/api/delete-persona/{persona_id}", delete_persona, methods=["DELETE"]),
+    Route("/api/update-persona/{persona_id}", update_persona, methods=["PUT"]),
     WebSocketRoute("/api/ws-chat", websocket_endpoint),
     Mount('/', StaticFiles(directory='dist', html=True), name='static')
 ])
 
-
-
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app,host='0.0.0.0', port=8000)
+    uvicorn.run(app,host='0.0.0.0', port=8001)

@@ -43,9 +43,22 @@ import { downloadCSV } from "./helper/DownloadFile";
 // const WS_URL = "ws://localhost:8000/api/ws-chat";
 import { socketURL } from "./SocketInstance.jsx";
 import AddItem from "./AddItem.jsx";
+// import personasWithTasks from "./helper/Persona.jsx";
+
 const WS_URL = `${socketURL}/api/ws-chat`;
 
+
+
 const App = ({ result1, setResult1 }) => {
+
+	const [personasWithTasks, setPersonasWithTasks] = useState([])
+
+	const agentOptions = personasWithTasks.map((persona) => ({
+		value: persona.role,
+		label: persona.name,
+	}));
+
+
 
 
 	const [addNewItem, setAddNewItem] = useState(false);
@@ -63,11 +76,11 @@ const App = ({ result1, setResult1 }) => {
 		mvp: "The Mobile Delivery Application is a tool that helps postal workers to prepare, deliver, and account for their deliveries. It has three main phases: Preparation, Delivery, and Accounting. In the Preparation phase, the user logs in by scanning their user barcode and adding their tour or delivery area number. The user also tags their card to the device. The user then goes to the Preparation menu and scans the items to be delivered. The items are displayed in a list with different colors according to their type and delivery option. The user can also see the additional information for each item, such as the delivery address, the recipient’s name, and the special labels that indicate the delivery conditions. The user can also use the quick links to perform different actions on the items, such as: Removing: The user can delete an item from the list if it is not needed or not available. Status: The user can assign a delivery obstacle status to an item, such as “Company closed” or “Refused to accept”. The item is then removed from the list and the status is shown in the back end. Moving: The user can move an item to another list, such as a new or existing STOP list or a GAS list. A STOP list is a list of items that are delivered at the same stop, such as a building or a street. A GAS list is a list of items that are delivered to a GAS customer, such as a supermarket or a pharmacy. The user can also set the number of print copies for each list. GAS: The user can create a GAS list and scan the items that belong to it. The user can also choose a GAS customer from a list of predefined options. STOP: The user can create a STOP list and scan the items that belong to it. The user can also assign a STOP number to the list. The user can also print the delivery orders for each list or item by going to the Print menu and selecting the Print orders option. The user can then close the preparation phase by selecting the End Preparation option from the three-dot menu. The user is then asked to confirm the pop-up and is returned to the main menu. In the Delivery phase, the user delivers the items according to the lists and assigns the appropriate statuses to them. The user can also fill out the required fields and collect the signatures of the recipients. The user also connects a printer to the device and prints the receipts and notifications for the items that require them. The user can perform the following actions in this phase: Delivery-STOP: The user can select a list or an item and press the Delivery-STOP button to deliver it. The user can then assign a status to the item from the following options: Personal: The user delivers the item personally to the recipient and collects their signature. The user also fills out the mandatory Allgemein fields, such as the name and the gender of the recipient. The user also prints a receipt for the item if it has a special label, such as Cash on delivery or Postage due. Roommate: The user delivers the item to a roommate or a neighbor of the recipient and collects their signature. The user also fills out the mandatory fields, such as the name and the gender of the roommate or neighbor. The user also prints a receipt for the item if it has a special label, such as Cash on delivery or Postage due. Employee: The user delivers the item to an employee of the recipient and collects their signature. The user also fills out the mandatory fields, such as the name and the gender of the employee. The user also prints a receipt for the item if it has a special label, such as Cash on delivery or Postage due. Notified: The user notifies the recipient that the item is available for pickup at a post office or a deposit place. The user also selects a deposit place from a list of predefined options and fills out the mandatory fields, such as the storage period and the pickup date. The user also prints a notification for the item and attaches it to the item. Deposited: The user deposits the item at a safe place, such as a mailbox or a garage. The user also prints a notification for the item and attaches it to the item. Refused to accept: The user returns the item to the sender because the recipient refused to accept it. The user also fills out the mandatory fields, such as the reason for the refusal and the date of the refusal. Release: The user can select an item from a list and press the Release button to remove it from the list. The item is then moved to the Delivery list as a single item. Transfer: The user can select an item from the list and press the Transfer button to transfer it to another delivery option, such as a post office or a post partner. The user also fills out the mandatory fields, such as the name and the address of the post office or the post partner. Obstacle: The user can select an item from the list and press the Obstacle button to assign a delivery obstacle status to it, such as “Company closed” or “Refused to accept”. The item is then removed from the list and the status is shown in the back-end. The user can also print the receipts and notifications for the items that require them by connecting a printer to the device and holding it against the back of the device. The user can then confirm the pop-up and print the documents. The user can also start the delivery phase by pressing the Start Delivery button from the main menu and selecting the delivery vehicle type, such as PT-Postal vehicle or Car. Allgemein In the Accounting phase, the user accounts for the cash collected and the items deposited at the post office. The user can perform the following actions in this phase: Deposit: The user can go to the Deposit tab and scan the barcode of the item that is going to be deposited at a post office. The user also fills out the mandatory fields and signs. The user can also swipe left for the All tab and search for the post office that was chosen when assigning the Notified status to the item. Accounting: The user can go to the Accounting tab and fill out the amount of cash collected. The user can also generate a barcode by pressing the Generate barcode button and then the Next button. The user then scans the barcode and the item that is displayed on the screen. The user can also scan the Accounting barcode, which is a QR code that contains the relevant information, such as the user ID, the date, the time, and the amount of cash. End Delivery: The user can press the End Delivery button from the main menu and scan the barcode of the item that is displayed on the screen. The user then presses the Log out button and logs out. The accounting phase is then over.",
 
 		glossary:
-		"",
-			// "The glossary serves as a reference for key terms used within the Mobile Delivery Application to ensure users have a clear understanding of its features. For instance, Preparation refers to the stage where delivery items are scanned, organized, and scheduled. Delivery Status indicates real-time updates on a package’s journey, while Accounting covers the recording and reconciliation of delivery data for accountability. Additionally, Real-Time Tracking is a feature that allows continuous monitoring of delivery progress to enhance transparency and efficiency",
+			"",
+		// "The glossary serves as a reference for key terms used within the Mobile Delivery Application to ensure users have a clear understanding of its features. For instance, Preparation refers to the stage where delivery items are scanned, organized, and scheduled. Delivery Status indicates real-time updates on a package’s journey, while Accounting covers the recording and reconciliation of delivery data for accountability. Additionally, Real-Time Tracking is a feature that allows continuous monitoring of delivery progress to enhance transparency and efficiency",
 		user_analysis:
-		""
-			// "The User Analysis focuses on understanding the needs and behaviors of postal workers to tailor the Mobile Delivery Application to their workflow. The primary users are postal workers responsible for managing deliveries, routes, and package updates. Their key requirements include maintaining accuracy in delivery records, receiving real-time updates, and having access to a user-friendly interface. The application addresses challenges such as reducing manual errors, saving time, and streamlining workflows. Regular feedback from users is incorporated into the development process to continuously refine and enhance the application's functionality.",
+			""
+		// "The User Analysis focuses on understanding the needs and behaviors of postal workers to tailor the Mobile Delivery Application to their workflow. The primary users are postal workers responsible for managing deliveries, routes, and package updates. Their key requirements include maintaining accuracy in delivery records, receiving real-time updates, and having access to a user-friendly interface. The application addresses challenges such as reducing manual errors, saving time, and streamlining workflows. Regular feedback from users is incorporated into the development process to continuously refine and enhance the application's functionality.",
 	});
 	const [feedback, setFeedBack] = useState(null);
 	const [feedback1, setFeedBack1] = useState("");
@@ -126,6 +139,10 @@ const App = ({ result1, setResult1 }) => {
 
 	const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
+	const [agent1, setAgent1] = useState("Product Owner");
+	const [agent2, setAgent2] = useState("Solution Architect");
+	const [agent3, setAgent3] = useState("developer");
+
 	// Handle row selection
 	const onSelectChange = (newSelectedRowKeys) => {
 		setSelectedRowKeys(newSelectedRowKeys);
@@ -146,6 +163,15 @@ const App = ({ result1, setResult1 }) => {
 		developer: null,
 	});
 
+
+	const handleAgentChange = (value, setter, otherAgents) => {
+		if (!otherAgents.includes(value)) {
+			setter(value);
+		}
+	};
+
+	const selectedAgents = [agent1, agent2, agent3];
+
 	const isButtonDisabled =
 		!selectedInnerPanel.productOwner ||
 		!selectedInnerPanel.solutionArchitect ||
@@ -154,6 +180,20 @@ const App = ({ result1, setResult1 }) => {
 	// const handleCheckboxChange = (key) => {
 	// 	setSelectedInnerPanel(key);
 	// };
+
+	useEffect(() => {
+		const fetchPersonas = async () => {
+			try {
+				const response = await fetch("/api/personas");
+				const data = await response.json();
+				setPersonasWithTasks(data);
+			} catch (error) {
+				console.error("Error fetching personas:", error);
+			}
+		};
+
+		fetchPersonas();
+	}, []);
 
 	useEffect(() => {
 		console.log("selected rounds:", selectedInnerPanel);
@@ -203,6 +243,7 @@ const App = ({ result1, setResult1 }) => {
 				const data = JSON.parse(event.data);
 
 				if (data.agentType === "Final_output_into_table") {
+					setLoading(false);
 					setFinalTableData(data.message);
 					setFinalPrioritizationType(data.prioritization_type);
 				}
@@ -450,15 +491,35 @@ const App = ({ result1, setResult1 }) => {
 		e.preventDefault();
 		// const requestId = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`; // Same logic for consistency
 
+		const selectedAgents = [agent1, agent2, agent3].map(role =>
+			personasWithTasks.find(persona => persona.role === role)
+		);
+
+		// Prepare agent data to send
+		// const agentsData = selectedAgents.map(agent => ({
+		// 	name: agent.name,
+		// 	role: agent.role,
+		// 	basic_user_prompt: agent.basic_user_prompt
+		// }));
+		const agentsData = selectedAgents.map(agent => ({
+			// name: agent.role,
+			role: agent.role,
+			// prioritization: agent.tasks.find(task => task.taskName === "prioritization").prompt
+		}));
+
+		console.log("agentdtaatt", agentsData);
+		// return;
+
+
 		let imageBase64 = null;
-    	if (visionFile) {
-        const reader = new FileReader();
-        reader.readAsDataURL(visionFile);
-        reader.onload = () => {
-            imageBase64 = reader.result.split(",")[1]; // Remove data:image/png;base64 prefix
-        };
-        await new Promise(resolve => reader.onloadend = resolve);
-   		}
+		if (visionFile) {
+			const reader = new FileReader();
+			reader.readAsDataURL(visionFile);
+			reader.onload = () => {
+				imageBase64 = reader.result.split(",")[1]; // Remove data:image/png;base64 prefix
+			};
+			await new Promise(resolve => reader.onloadend = resolve);
+		}
 
 		try {
 			setLoading(true);
@@ -477,6 +538,7 @@ const App = ({ result1, setResult1 }) => {
 					model: selectModel,
 					feedback: feedback,
 					context_image: imageBase64,
+					agents: agentsData,
 				}),
 			});
 			if (!response.ok) {
@@ -508,7 +570,7 @@ const App = ({ result1, setResult1 }) => {
 
 	// const handleGenerateStories = async (e) => {
 	// 	e.preventDefault();
-	
+
 	// 	const formData = new FormData();
 	// 	formData.append("vision", textBox.vision);
 	// 	formData.append("mvp", textBox.mvp);
@@ -516,22 +578,22 @@ const App = ({ result1, setResult1 }) => {
 	// 	formData.append("user_analysis", textBox.user_analysis);
 	// 	formData.append("model", selectModel);
 	// 	formData.append("feedback", feedback);
-		
+
 	// 	if (visionFile) {
 	// 		formData.append("context_image", visionFile); // Send the image as a file
 	// 	}
-	
+
 	// 	try {
 	// 		setLoading(true);
 	// 		const response = await fetch("/api/generate-user-stories", {
 	// 			method: "POST",
 	// 			body: formData, // Use FormData instead of JSON
 	// 		});
-	
+
 	// 		if (!response.ok) {
 	// 			throw new Error("Response error");
 	// 		}
-	
+
 	// 		const message = await response.json();
 	// 		setResult1(message.final_response);
 	// 		setLoading(false);
@@ -542,9 +604,9 @@ const App = ({ result1, setResult1 }) => {
 	// 		notification.error({ message: "Internal Server Error" });
 	// 	}
 	// };
-	
+
 	const handleReGenerateStories = async (e) => {
-		
+
 
 		e.preventDefault();
 		// const requestId = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`; // Same logic for consistency
@@ -702,7 +764,7 @@ const App = ({ result1, setResult1 }) => {
 	const handleAdd = () => {
 		navigate(`/add`);
 	};
-	
+
 
 	// const handleUpdateItem = (updatedItem) => {
 	//   setResult1((prevResult) =>
@@ -714,7 +776,21 @@ const App = ({ result1, setResult1 }) => {
 	const sendInput = () => {
 		if (ws && ws.readyState === WebSocket.OPEN) {
 			// console.log("technique:", prioritizationTechnique);
+			const selectedAgents = [agent1, agent2, agent3].map(role =>
+				personasWithTasks.find(persona => persona.role === role)
+			);
 
+			// Prepare agent data to send
+			// const agentsData = selectedAgents.map(agent => ({
+			// 	name: agent.name,
+			// 	role: agent.role,
+			// 	basic_user_prompt: agent.basic_user_prompt
+			// }));
+			const agentsData = selectedAgents.map(agent => ({
+				name: agent.name,
+				role: agent.role,
+				prioritization: agent.tasks.find(task => task.taskName === "prioritization").prompt
+			}));
 
 			if (selectType === "input") {
 				ws.send(
@@ -726,6 +802,7 @@ const App = ({ result1, setResult1 }) => {
 						prioritization_type: prioritizationTechnique,
 						feedback: feedback,
 						rounds: rounds,
+						agents: agentsData,
 					})
 				);
 			} else {
@@ -736,6 +813,7 @@ const App = ({ result1, setResult1 }) => {
 						prioritization_type: prioritizationTechnique,
 						feedback: feedback,
 						rounds: rounds,
+						agents: agentsData,
 					})
 				);
 			}
@@ -1437,6 +1515,7 @@ const App = ({ result1, setResult1 }) => {
 														style={{
 															paddingBottom: 10,
 															display: "flex",
+
 														}}>
 														{/* <h5 style={{ marginTop: "8px" }}> Select Type:</h5> */}
 														<div
@@ -1475,6 +1554,77 @@ const App = ({ result1, setResult1 }) => {
 																Upload files
 															</label>
 														</div>
+														{type === "textbox" && (
+
+															<div style={{
+																display: "flex",
+																justifyContent: "space-between",
+																// border:'2px solid red',
+																alignItems: "center",
+																justifyContent: 'space-between',
+																paddingLeft: "25px",
+																width: '70%',
+																// marginRight: "37px",
+															}}>
+																<div style={{
+																	display: "flex",
+																	justifyContent: "space-between",
+																	// border:'2px solid red',
+																	width: '50%',
+
+																	alignItems: "center",
+																	justifyContent: 'space-between',
+																}}>
+																	<Form.Item label="Agent 1"
+																		layout="vertical"
+
+																	>
+																		<Select
+																			value={agent1}
+																			onChange={(value) => handleAgentChange(value, setAgent1, [agent2, agent3])}
+																			options={agentOptions.map((option) => ({
+																				...option,
+																				disabled: selectedAgents.includes(option.value) && option.value !== agent1,
+																			}))}
+																		/>
+																	</Form.Item>
+
+																	<Form.Item label="Agent 2"
+																		layout="vertical"
+
+																	>
+																		<Select
+																			value={agent2}
+																			// style={{margin: "0px 5px"}}
+																			onChange={(value) => handleAgentChange(value, setAgent2, [agent1, agent3])}
+																			options={agentOptions.map((option) => ({
+																				...option,
+																				disabled: selectedAgents.includes(option.value) && option.value !== agent2,
+																			}))}
+																		/>
+																	</Form.Item>
+
+																	<Form.Item
+																		layout="vertical"
+
+																		label="Agent 3">
+																		<Select
+																			// style={{marginLeft: " 5px"}}
+
+
+																			value={agent3}
+																			onChange={(value) => handleAgentChange(value, setAgent3, [agent1, agent2])}
+																			options={agentOptions.map((option) => ({
+																				...option,
+																				disabled: selectedAgents.includes(option.value) && option.value !== agent3,
+																			}))}
+																		/>
+																	</Form.Item>
+																</div>
+																<Button type="primary" onClick={() => navigate("/agent_list")}>Agents List</Button>
+																
+															</div>
+														)}
 													</div>
 												</div>
 												{type === "textbox" ? (
@@ -1518,6 +1668,9 @@ const App = ({ result1, setResult1 }) => {
 																	style={{ color: "black" }}
 																/>
 															</Form.Item>
+
+
+
 															<Form.Item
 																label="Select Model"
 																style={{ flex: "18%", marginRight: "5px" }}>
@@ -1547,26 +1700,7 @@ const App = ({ result1, setResult1 }) => {
 																	]}
 																/>
 															</Form.Item>
-															{/* {result1.length > 0 ? (
 
-															<Form.Item style={{ marginTop: "30px" }}>
-																<Button
-																	type="primary"
-																	icon={<SearchOutlined />}
-																	onClick={handleGenerateStories}>
-																	Regenerate
-																</Button>
-															</Form.Item>
-														) : (
-															<Form.Item style={{ marginTop: "30px" }}>
-																<Button
-																	type="primary"
-																	icon={<SearchOutlined />}
-																	onClick={handleGenerateStories}>
-																	Generate
-																</Button>
-															</Form.Item>
-														)} */}
 															<Form.Item style={{ marginTop: "30px" }}>
 																<Button
 																	type="primary"
@@ -1582,7 +1716,7 @@ const App = ({ result1, setResult1 }) => {
 															<Form
 																layout="vertical"
 																style={{
-																	width: "80%",
+																	width: "81%",
 																	display: "flex",
 																	alignItems: "center",
 																}}>
@@ -1618,17 +1752,22 @@ const App = ({ result1, setResult1 }) => {
 																		style={{ color: "black" }}
 																	/>
 																</Form.Item>
+
+
+
 															</Form>
-															
+
 															<Form.Item layout="vertical"
 																label="Upload Context Image"
-																style={{ flex: "1 1 70%", marginRight: "5px", width:'80%' }}>
+																style={{ flex: "1 1 70%", marginRight: "5px", width: '80%' }}>
 																<Input
 																	type="file"
 																	name="vision"
 																	onChange={handleVisionFileChange}
 																/>
 															</Form.Item>
+
+
 
 														</div>
 													</div>
@@ -1659,6 +1798,7 @@ const App = ({ result1, setResult1 }) => {
 																	onChange={handleMvpFileChange}
 																/>
 															</Form.Item>
+
 															<Form.Item
 																label="Select Model"
 																style={{ flex: "18%", marginRight: "5px" }}>
@@ -1735,7 +1875,7 @@ const App = ({ result1, setResult1 }) => {
 																	autoSize={{ minRows: 2 }}
 																/>
 															</Form.Item>
-															
+
 
 															<Form.Item style={{ marginRight: "7px", marginTop: "25px" }}>
 																<Button
@@ -1746,14 +1886,14 @@ const App = ({ result1, setResult1 }) => {
 																</Button>
 															</Form.Item>
 
-															<Form.Item style={{ marginTop: "25px"  }}>
-															<Button
-																type="primary"
-																// icon={<SearchOutlined />}
-																onClick={handleReset}>
-																Reset
-															</Button>
-														</Form.Item>
+															<Form.Item style={{ marginTop: "25px" }}>
+																<Button
+																	type="primary"
+																	// icon={<SearchOutlined />}
+																	onClick={handleReset}>
+																	Reset
+																</Button>
+															</Form.Item>
 
 														</Form>
 													</div>
@@ -1886,7 +2026,7 @@ const App = ({ result1, setResult1 }) => {
 												borderRadius: "10px",
 												marginBottom: 5,
 											}}>
-												
+
 											<Space
 												direction="vertical"
 												style={{ width: "100%", padding: "10px 0px" }}>
@@ -1907,8 +2047,8 @@ const App = ({ result1, setResult1 }) => {
 																		gap: "10px",
 																	}}>
 
-																	
-																	
+
+
 																	<button
 																		onClick={() => handleEdit(record)}
 																		style={{
@@ -1941,34 +2081,46 @@ const App = ({ result1, setResult1 }) => {
 												/>
 											</Space>
 											{/* <Form.Item> */}
-											
+
 											<div style={{
-												width:'100%',
+												width: '100%',
 												// border:'2px solid',
-												display:'flex',
-												justifyContent:'space-between'
+												display: 'flex',
+												justifyContent: 'space-between'
 											}}>
-											<button
-																		// onClick={() => hand}
-																		onClick={() => handleAdd()}
-																		style={{
-																			backgroundColor: "rgba(52, 170, 52, 0.74)",
-																			color: "white",
-																			padding: "5px 20px",
-																			border: "none",
-																			borderRadius: "5px",
-																			cursor: "pointer",
-																			marginLeft:'5px'
-																		
-																		}}>
-																		Add New User Story
-																	</button>
-											<Button
-												type="primary"
-												// style={{ marginTop: "25px" }}
-												onClick={handleApproveStories}>
-												Approve Stories
-											</Button>
+												<button
+													// onClick={() => hand}
+													onClick={() => handleAdd()}
+													style={{
+														backgroundColor: "rgba(52, 170, 52, 0.74)",
+														color: "white",
+														padding: "5px 20px",
+														border: "none",
+														borderRadius: "5px",
+														cursor: "pointer",
+														marginLeft: '5px'
+
+													}}>
+													Add New User Story
+												</button>
+												<div >
+													<Button
+														type="primary"
+														// style={{ width: '16%', marginTop: '20px' }}
+														style={{marginRight:'10px'}}
+														// icon={<SearchOutlined />}
+														onClick={() => downloadCSV(result1)}
+
+													>
+														Download Stories
+													</Button>
+													<Button
+														type="primary"
+														// style={{ marginTop: "25px" }}
+														onClick={handleApproveStories}>
+														Approve Stories
+													</Button>
+												</div>
 											</div>
 											{/* </Form.Item> */}
 										</div>
@@ -2007,18 +2159,49 @@ const App = ({ result1, setResult1 }) => {
 														alignItems: "center",
 														justifyContent: "end",
 													}}>
-													{/* <Form.Item
-													label="Feedback"
-													style={{ width: "63%", marginRight: "20px" }}>
-													<TextArea
-														rows={2}
-														placeholder="Enter your feedback"
-														value={feedback}
-														onChange={(e) => setFeedBack(e.target.value)}
-														style={{ color: "black" }}
-													// autoSize={{ minRows: 2 }}
-													/>
-												</Form.Item> */}
+													<div style={{
+														display: "flex",
+														justifyContent: "space-between",
+														width: "29%",
+														marginRight: "37px",
+													}}>
+														<Form.Item label="Agent 1">
+															<Select
+																value={agent1}
+																onChange={(value) => handleAgentChange(value, setAgent1, [agent2, agent3])}
+																options={agentOptions.map((option) => ({
+																	...option,
+																	disabled: selectedAgents.includes(option.value) && option.value !== agent1,
+																}))}
+															/>
+														</Form.Item>
+
+														<Form.Item label="Agent 2" >
+															<Select
+																value={agent2}
+																// style={{margin: "0px 5px"}}
+																onChange={(value) => handleAgentChange(value, setAgent2, [agent1, agent3])}
+																options={agentOptions.map((option) => ({
+																	...option,
+																	disabled: selectedAgents.includes(option.value) && option.value !== agent2,
+																}))}
+															/>
+														</Form.Item>
+
+														<Form.Item label="Agent 3">
+															<Select
+																// style={{marginLeft: " 5px"}}
+
+
+																value={agent3}
+																onChange={(value) => handleAgentChange(value, setAgent3, [agent1, agent2])}
+																options={agentOptions.map((option) => ({
+																	...option,
+																	disabled: selectedAgents.includes(option.value) && option.value !== agent3,
+																}))}
+															/>
+														</Form.Item>
+													</div>
 
 													<Form.Item label="Prioritization Technique">
 														<Select
@@ -2027,17 +2210,17 @@ const App = ({ result1, setResult1 }) => {
 															onChange={handleLanguage}
 															value={prioritizationTechnique}
 															options={labelOptions}
-											style={{ marginRight: " 10px" }}
+															style={{ marginRight: " 10px" }}
 
 														/>
 													</Form.Item>
 													<Form.Item label="Rounds">
-													<Input
-											type="number"
-											value={rounds}
-											onChange={(e) => setRounds(e.target.value)}
-											style={{ margin: "0px 5px" }}
-										/>
+														<Input
+															type="number"
+															value={rounds}
+															onChange={(e) => setRounds(e.target.value)}
+															style={{ margin: "0px 5px" }}
+														/>
 													</Form.Item>
 													<Form.Item
 														label="Model"
@@ -2078,7 +2261,7 @@ const App = ({ result1, setResult1 }) => {
 															type="primary"
 															icon={<SearchOutlined />}
 															onClick={handleSubmit}
-															
+
 															disabled={prioritizationTechnique === null}>
 															Generate
 														</Button>

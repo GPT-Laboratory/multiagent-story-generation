@@ -108,6 +108,34 @@ html, body {
   font-weight: 450 !important;
 }
 
+.chat-message-center-1 .message-content {
+  background-color: #f8f4b8;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+.chat-message-center-2 .message-content {
+  background-color: #fad7e0;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+.chat-message-center-3 .message-content {
+  background-color: #e5c6fa;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
+.default-chat-message .message-content {
+  background-color: #efe0f8;
+  height: 450px !important;
+  font-size: 16px !important;
+  font-weight: 450 !important;
+}
+
 .chat-message-final .message-content {
   background-color: #8fc1ff;
   height: 300px !important;
