@@ -122,12 +122,65 @@ def construct_ahp_prompt(data, topic_response, context_response):
     return prompt
 
 
+# async def send_to_llm(prompt, headers, model, timeout=100):
+#     if model.startswith("llama3") or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
+#         url = LLAMA_URL
+#         headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
+#     elif model == "deepseek-r1:7b":
+#         # Initialize OpenAI client for DeepSeek model
+#         client = OpenAI(
+#             base_url='https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1',
+#             api_key=GPT_API_KEY
+#         )
+
+#         response = client.chat.completions.create(
+#             model=model,
+#             messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}]
+#         )
+
+#         generated_content = response.choices[0].message.content
+#         print(f"Generated response using DeepSeek: {generated_content}")
+#         return generated_content
+#     else:
+#         url = OPENAI_URL
+#         headers["Authorization"] = f"Bearer {random.choice(api_keys)}"
+    
+#     post_data = {
+#         "model": model,
+#         "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}],
+#         "temperature": 0.7
+#     }
+    
+#     response = requests.post(url, json=post_data, headers=headers, timeout=timeout)
+    
+#     if response.status_code == 200:
+#         completion = response.json()
+#         completion_text = completion['choices'][0]['message']['content']
+#         return completion_text
+#     else:
+#         raise Exception("Failed to process the request with OpenAI")
+    
 async def send_to_llm(prompt, headers, model, timeout=100):
+    format_instruction = """
+    Please format your response in the following way:
+
+    ```
+    - Story ID 1: 10 dollars
+    - Story ID 2: 8 dollars
+    - Story ID 3: 12 dollars
+    - Story ID 4: 5 dollars
+    ```
+    
+    Ensure:
+    1. The story IDs follow the format: `- Story ID X: Y dollars`
+    2. No extra explanations or calculations in the response.
+    3. The sum of all allocated dollars should be exactly 100.
+    """
+
     if model.startswith("llama3") or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
     elif model == "deepseek-r1:7b":
-        # Initialize OpenAI client for DeepSeek model
         client = OpenAI(
             base_url='https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1',
             api_key=GPT_API_KEY
@@ -135,7 +188,11 @@ async def send_to_llm(prompt, headers, model, timeout=100):
 
         response = client.chat.completions.create(
             model=model,
-            messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": format_instruction},  # <-- Add format instruction
+                {"role": "user", "content": prompt}
+            ]
         )
 
         generated_content = response.choices[0].message.content
@@ -147,7 +204,11 @@ async def send_to_llm(prompt, headers, model, timeout=100):
     
     post_data = {
         "model": model,
-        "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}],
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": format_instruction},  # <-- Add format instruction
+            {"role": "user", "content": prompt}
+        ],
         "temperature": 0.7
     }
     
@@ -159,7 +220,8 @@ async def send_to_llm(prompt, headers, model, timeout=100):
         return completion_text
     else:
         raise Exception("Failed to process the request with OpenAI")
-    
+
+
 
 async def send_to_llm_for_img(prompt, image_base64, headers, model, timeout=100):
     if model.startswith("llama3") or model == "mixtral-8x7b-32768":
@@ -408,7 +470,8 @@ def construct_batch_100_dollar_prompt(data, qa_response, dev_response, po_respon
 #     return prompt
 
 def parse_100_dollar_response(response_text):
-    pattern = re.compile(r"- Story ID (\d+): .*?(\d+) dollars")
+    # pattern = re.compile(r"- Story ID (\d+): .*?(\d+) dollars")
+    pattern = re.compile(r"- Story ID (\d+): (\d+) dollars")
     dollar_distribution = []
 
     for match in pattern.finditer(response_text):
