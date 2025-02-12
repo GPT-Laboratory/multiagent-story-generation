@@ -55,7 +55,7 @@ const App = ({ result1, setResult1 }) => {
 
 	const agentOptions = personasWithTasks.map((persona) => ({
 		value: persona.role,
-		label: persona.name,
+		// label: persona.name,
 	}));
 
 
@@ -91,8 +91,8 @@ const App = ({ result1, setResult1 }) => {
 	const [isApproved, setIsApproved] = useState(false)
 	const [prioritizationTechnique, setPrioritizationTechnique] =
 		useState("100_Dollar");
-	const [selectModel, setSelectModel] = useState("gpt-3.5-turbo");
-	const [rounds, setRounds] = useState(10);
+	const [selectModel, setSelectModel] = useState("gpt-4o-mini");
+	const [rounds, setRounds] = useState(3);
 	const [frameWork, setFromWork] = useState("INVEST framework");
 	const [frameWorkResult, setFrameWorkResult] = useState([]);
 	const [selectedFile, setSelectedFile] = useState(null);
@@ -210,7 +210,7 @@ const App = ({ result1, setResult1 }) => {
 		}));
 	};
 
-	console.log(selectType);
+	
 
 
 	const handleInputChange = (role, value) => {
@@ -866,6 +866,7 @@ const App = ({ result1, setResult1 }) => {
 		setLoading(true);
 		sendInputData();
 		setTotalMessageData("");
+		setFinalTableData([]);
 		// handleSuccessResponse(prioritizationTechnique, selectModel);
 		notification.success({
 			message: "Successfully ",
@@ -1561,7 +1562,7 @@ const App = ({ result1, setResult1 }) => {
 																justifyContent: "space-between",
 																// border:'2px solid red',
 																alignItems: "center",
-																justifyContent: 'space-between',
+																
 																paddingLeft: "25px",
 																width: '70%',
 																// marginRight: "37px",
@@ -1573,7 +1574,7 @@ const App = ({ result1, setResult1 }) => {
 																	width: '50%',
 
 																	alignItems: "center",
-																	justifyContent: 'space-between',
+																	
 																}}>
 																	<Form.Item label="Agent 1"
 																		layout="vertical"
@@ -1621,7 +1622,7 @@ const App = ({ result1, setResult1 }) => {
 																		/>
 																	</Form.Item>
 																</div>
-																<Button type="primary" onClick={() => navigate("/agent_list")}>Agents List</Button>
+																<Button type="primary" onClick={() => navigate("/agent_list")}>List Of Agents</Button>
 																
 															</div>
 														)}
@@ -1679,24 +1680,32 @@ const App = ({ result1, setResult1 }) => {
 																	optionFilterProp="children"
 																	onChange={handleModel}
 																	value={selectModel}
-																	defaultValue="gpt-3.5-turbo"
+																	defaultValue="gpt-4o-mini"
 																	options={[
 																		{
 																			value: "gpt-3.5-turbo",
 																			label: "gpt-3.5",
 																		},
+																		// {
+																		// 	value: "gpt-4o",
+																		// 	label: "gpt-4o",
+																		// },
 																		{
-																			value: "gpt-4o",
-																			label: "gpt-4o",
+																			value: "gpt-4o-mini",
+																			label: "gpt-4o"
 																		},
-																		{
-																			value: "llama3-70b-8192",
-																			label: "LLama3-70 Billion",
-																		},
-																		{
-																			value: "mixtral-8x7b-32768",
-																			label: "Mixtral-8x7b",
-																		},
+																		// {
+																		// 	value: "llama3-70b-8192",
+																		// 	label: "LLama3-70 Billion",
+																		// },
+																		// {
+																		// 	value: "mixtral-8x7b-32768",
+																		// 	label: "Mixtral-8x7b",
+																		// },
+																		// {
+																		// 	value: "deepseek-r1:7b",
+																		// 	label: "deepseek-r1",
+																		// }
 																	]}
 																/>
 															</Form.Item>
@@ -1807,7 +1816,7 @@ const App = ({ result1, setResult1 }) => {
 																	optionFilterProp="children"
 																	onChange={handleModel}
 																	value={selectModel}
-																	defaultValue="gpt-3.5-turbo"
+																	defaultValue="gpt-4o"
 																	options={[
 																		{
 																			value: "gpt-3.5-turbo",
@@ -1817,14 +1826,18 @@ const App = ({ result1, setResult1 }) => {
 																			value: "gpt-4o",
 																			label: "gpt-4o",
 																		},
-																		{
-																			value: "llama3-70b-8192",
-																			label: "LLama3-70 Billion",
-																		},
-																		{
-																			value: "mixtral-8x7b-32768",
-																			label: "Mixtral-8x7b",
-																		},
+																		// {
+																		// 	value: "deepseek-r1:7b",
+																		// 	label: "Deepseek-r1",
+																		// }
+																		// {
+																		// 	value: "llama3-70b-8192",
+																		// 	label: "LLama3-70 Billion",
+																		// },
+																		// {
+																		// 	value: "mixtral-8x7b-32768",
+																		// 	label: "Mixtral-8x7b",
+																		// },
 																	]}
 																/>
 															</Form.Item>
@@ -2230,7 +2243,7 @@ const App = ({ result1, setResult1 }) => {
 															optionFilterProp="children"
 															onChange={handleModel}
 															value={selectModel}
-															defaultValue="gpt-3.5-turbo"
+															defaultValue="gpt-4o"
 															options={[
 																{
 																	value: "gpt-3.5-turbo",
@@ -2240,14 +2253,18 @@ const App = ({ result1, setResult1 }) => {
 																	value: "gpt-4o",
 																	label: "GPT-4 Omni",
 																},
-																{
-																	value: "llama3-70b-8192",
-																	label: "LLama3-70 Billion",
-																},
-																{
-																	value: "mixtral-8x7b-32768",
-																	label: "Mixtral-8x7b",
-																},
+																// {
+																// 	value: "deepseek-r1:7b",
+																// 	label: "deepseek-r1"
+																// }
+																// {
+																// 	value: "llama3-70b-8192",
+																// 	label: "LLama3-70 Billion",
+																// },
+																// {
+																// 	value: "mixtral-8x7b-32768",
+																// 	label: "Mixtral-8x7b",
+																// },
 															]}
 														/>
 													</Form.Item>

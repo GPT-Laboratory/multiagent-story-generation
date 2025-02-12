@@ -6,6 +6,7 @@ import random
 import logging
 import os
 import csv
+from openai import OpenAI
 import requests
 from starlette.datastructures import UploadFile
 import httpx
@@ -13,6 +14,8 @@ from httpx import Timeout, AsyncClient
 import asyncio
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 import pdfplumber
+
+GPT_API_KEY = os.getenv("GPT_API_KEY")
 
 from agent import OPENAI_URL
 LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
@@ -120,9 +123,24 @@ def construct_ahp_prompt(data, topic_response, context_response):
 
 
 async def send_to_llm(prompt, headers, model, timeout=100):
-    if model.startswith("llama3") or model == "mixtral-8x7b-32768":
+    if model.startswith("llama3") or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
+    elif model == "deepseek-r1:7b":
+        # Initialize OpenAI client for DeepSeek model
+        client = OpenAI(
+            base_url='https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1',
+            api_key=GPT_API_KEY
+        )
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}]
+        )
+
+        generated_content = response.choices[0].message.content
+        print(f"Generated response using DeepSeek: {generated_content}")
+        return generated_content
     else:
         url = OPENAI_URL
         headers["Authorization"] = f"Bearer {random.choice(api_keys)}"

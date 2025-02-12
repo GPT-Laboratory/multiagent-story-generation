@@ -4,12 +4,16 @@ import re
 import json
 import os
 import json 
+from langchain.llms import Ollama
+from openai import OpenAI
 
 OPENAI_API_KEY = os.getenv("API-KEY1")
 LLAMA_API_KEY = os.getenv("LLAMA-key1")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
-
+DEEPSEEK_URL="https://gptlab.rd.tuni.fi/GPT-Lab/resources/Otula-P40-L4/api/generate",
+GPT_API_KEY = os.getenv("GPT_API_KEY")
 
 # Load environment variables from .env file
 api_keys = [os.getenv(f"API-KEY{i}") for i in range(1, 4)]
@@ -326,34 +330,7 @@ def generate_user_stories_with_epics( vision, mvp, glossary, user_analysis, mode
         raise Exception("Failed to process the request with OpenAI: " + response.text)
 
 
-# def parse_user_stories(text_response):
-#     # Adjusted pattern to match the structured numbered list format, including the last line without a newline
-#     pattern = re.compile(
-#         r"### User Story \d+:\n"
-#         r"- User Story: (.*?)\n"
-#         r"- Epic: (.*?)\n"
-#         r"- Description: (.*?)(?=\n### User Story \d+:|\Z)",
-#         re.DOTALL
-#     )
 
-#     matches = pattern.findall(text_response)
-#     user_stories = []
-
-#     for match in matches:
-#         user_stories.append({
-#             "user_story": match[0].strip(),
-#             "epic": match[1].strip(),
-#             "description": match[2].strip(),
-#         })
-
-#     if not user_stories:
-#         user_stories.append({
-#             "user_story": "User story not provided",
-#             "epic": "Epic not provided",
-#             "description": "Description not provided",
-#         })
-
-#     return user_stories
 
 
 def parse_user_stories(text_response):
@@ -362,8 +339,6 @@ def parse_user_stories(text_response):
         r"### User Story \d+:\n"
         r"- User Story: (.*?)\n"
         r"- Epic: (.*?)\n"
-        # r"- Description: (.*?)(?=\n### User Story \d+:|\Z)",
-        # r"- Suggestion: (.*?)",
         r"- Description: (.*?)(?:\n- Suggestion: (.*?))?(?=\n### User Story \d+:|\Z)",
         re.DOTALL
     )
@@ -390,75 +365,30 @@ def parse_user_stories(text_response):
     return user_stories
 
 
-# async def process_role(input_content, model, headers):
-#     # Determine the URL and headers based on the model
-#     if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
-#         url = LLAMA_URL
-#         headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
-#     else:
-#         url = OPENAI_URL
-#         headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
-
-#     # Combined prompt for all roles
-#     combined_prompt = (
-#         "You are a helpful assistant tasked with generating unique user stories and grouping them under relevant epics based on any project vision or MVP goal provided.\n\n"
-#         "You will simulate the roles of Product Owner (PO), Solution Architect (SA), Security Expert, and Compliance Expert in sequence. Each role will contribute to the refinement and creation of user stories based on their area of expertise. "
-#         "The process is as follows:\n"
-#         "- The Product Owner (PO) starts by generating initial user stories and epics based on the project's vision, MVP goals, glossary, and user analysis.\n"
-#         "- The Solution Architect (SA) refines these stories by adding technical considerations and ensuring they align with the architectural vision.\n"
-#         "- The Security Expert reviews and enhances the user stories with security requirements and considerations.\n"
-#         "- The Compliance Expert adds regulatory and compliance requirements to the stories.\n\n"
-#         "Given the following data:\n"
-#         f"- Vision: {input_content['vision']}\n"
-#         f"- MVP Goals: {input_content['mvp']}\n"
-#         f"- Glossary: {input_content['glossary']}\n"
-#         f"- User Analysis: {input_content['user_analysis']}\n\n"
-#         "Generate a comprehensive and detailed set of user stories grouped under relevant epics. Each story should include:\n"
-#         "1. User Story: A clear and concise description. Example: 'As a <role>, I want to <action>, in order to <benefit>'.\n"
-#         "2. Epic: The broad epic under which the user story falls.\n"
-#         "3. Description: Detailed acceptance criteria for the user story.\n\n"
-#         "Simulate each role's contribution to refining the stories sequentially. Provide a structured output where the contributions of each role are clearly distinguished.\n\n"
-#         "Output format:\n"
-#         "### Role: <role_name>\n"
-#         "- Contributions: <details of changes or additions>\n\n"
-#         "### Final User Stories:\n"
-#         "For each story, provide:\n"
-#         "- User Story: <description>\n"
-#         "- Epic: <epic>\n"
-#         "- Description: <acceptance criteria>\n\n"
-#     ).format(vision=input_content['vision'], mvp=input_content['mvp'], glossary=input_content['glossary'], user_analysis=input_content['user_analysis'])
-
-#     # Prepare the data for the POST request
-#     post_data = json.dumps({
-#         "model": model,
-#         "messages": [
-#             {"role": "system", "content": "You are an assistant that can simulate multiple roles to generate and refine user stories."},
-#             {"role": "user", "content": combined_prompt}
-#         ],
-#         "temperature": 0.7
-#     })
-
-#     # Make the API request
-#     response = requests.post(url, data=post_data, headers=headers)
-
-#     # Handle the response
-#     if response.status_code == 200:
-#         response_data = response.json()
-#         generated_content = response_data['choices'][0]['message']['content']
-#         # print(f"Generated content: {generated_content}")
-#         return generated_content
-#     else:
-#         raise Exception(f"Failed to process the request with OpenAI: {response.text}")
 
 
 def process_role(input_content, image_url, model, headers, role, feedback):
     # Determine the URL and headers based on the model
-    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+    # if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+    #     url = LLAMA_URL
+    #     headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    # else:
+    #     url = OPENAI_URL
+    #     headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
+
+    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    elif model == "deepseek-r1:7b":
+        # Initialize Ollama for the DeepSeek model
+        client = OpenAI(
+            base_url = 'https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1',
+            api_key= GPT_API_KEY
+        )
     else:
         url = OPENAI_URL
         headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
+
 
     print('feedback comes',feedback)   
 
@@ -480,66 +410,112 @@ def process_role(input_content, image_url, model, headers, role, feedback):
     "You are a helpful assistant tasked with generating unique user stories and grouping them under relevant epics based on any project vision or MVP goal provided.\n"
     "When generating user stories, ensure they are grouped under relevant epics based on overarching themes, functionalities, or MVP goals identified. Each epic should contain multiple user stories that cover various aspects of the same theme or functionality. "
     "Aim to generate as many stories as necessary to fully cover the scope of the project, with **no upper limit on the number of user stories**. Focus on breaking down large functionalities into individual, task-specific stories.\n\n"
-    f"Given the project vision: '{input_content['vision']}' and MVP goals: '{input_content['mvp']}', and the glossary: '{input_content['glossary']}' and user analysis: '{input_content['user_analysis']}' and context Image {image_url}, generate a comprehensive and distinct set of user stories that align with these core elements. "
+    f"Given the project vision: '{input_content['vision']}' and MVP goals: '{input_content['mvp']}', and the glossary: '{input_content['glossary']}' and user analysis: '{input_content['user_analysis']}', generate a comprehensive and distinct set of user stories that align with these core elements. "
     "Ensure each story comprehensively addresses both functional and technical aspects relevant to the project, with a focus on supporting the project's primary vision and achieving a highly detailed MVP.\n\n"
      + feedback_section +
     "For each user story, provide the following details:\n"
     "1. User Story: A clear and concise description that encapsulates a specific need or problem. Example: 'As a <role>, I want to <action>, in order to <benefit>'. Each story should directly support the project's vision or contribute towards a functional MVP.\n"
     "2. Epic: The broad epic under which the user story falls. Each epic can encompass multiple related user stories that share a similar scope or functionality.\n"
-    "3. Description: Very Very Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete, particularly in terms of MVP completion and alignment with the vision. Like Context, Functionality Breakdown, Edge Cases & Error Handling, Acceptance Criteria, Technical Considerations, User Experience Factors.\n\n"
-    "4. Suggestion: If any role analyzing the user story has improvements, modifications, or additional considerations, list them here. Ensure these suggestions are actionable and directly relevant to enhancing the user story, epic, or description. Specify the role providing the suggestion (e.g., Product Owner, Developer, QA Engineer).\n"
+    "3. Description: Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete, particularly in terms of MVP completion and alignment with the vision.\n\n"
+    f"4. Suggestion: If this {role} role suggest anything about the stories then provide this {role} role name.\n"
     
-    "Additional Guidance:\n"
-    "- **Encourage atomic functionalities**: Create user stories for individual actions and small steps within each phase of the MVP.\n"
-    "- **Ensure maximum detail**: Generate highly specific user stories that focus on even the smallest functionalities, such as scanning, logging in, generating reports, and handling errors.\n"
-    "- **At least 15 stories**: Ensure that a minimum of 15 user stories are generated to cover all major and minor aspects of the MVP.\n"
-    "- **No upper limit**: Keep breaking down actions until all core and sub-tasks within the MVP are covered.\n\n"
-    "- **Remember At least 15 stories are must**: Ensure that a minimum of 15 user stories are generated to cover all major and minor aspects of the MVP.\n"
-
-    "Please use the following format for each story:\n"
+    "Stricktly provide me response in this format for each story:\n"
     "### User Story X:\n"
     "- User Story: As a <role>, I want to <action>, in order to <benefit>.\n"
     "- Epic: <epic> (This epic may encompass multiple related user stories)\n"
-    "- Description: Very Very Detailed and clear acceptance criteria that define the success of the user story, particularly in achieving MVP functionality and supporting the overall vision. Like Context, Functionality Breakdown, Edge Cases & Error Handling, Acceptance Criteria, Technical Considerations, User Experience Factors. \n"
+    "- Description: Detailed and clear acceptance criteria that define the success of the user story, particularly in achieving MVP functionality and supporting the overall vision. \n"
     "- Suggestion: \n"
     f"    <The role providing the suggestion> {role} \n"
-    
     )
-    # ).format(vision=input_content['vision'], mvp=input_content['mvp'], glossary=input_content['glossary'], user_analysis=input_content['user_analysis'], context=image_data)
-  
-
+    
     print(f"Total prompt length: {len(prompt_content)} characters")
-    # Prepare the data for the POST request
-    post_data = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
-            {"role": "user", "content": prompt_content},
-        ],
-        "temperature": 0.7
-    })
 
-    # post_data = json.dumps({
+    
+  
+    if model == "deepseek-r1:7b":
+
+        response = client.chat.completions.create(
+        model=model,
+        messages= [
+                    {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
+                    {"role": "user", "content": prompt_content},
+        ]
+        )
+
+
+        # print(response.choices[0].message.content)
+        # Use Ollama's generate function for the DeepSeek model
+        generated_content = response.choices[0].message.content
+        print(f"Generated content for role {role} using Ollama: {generated_content}")
+        return generated_content
+    else:
+        post_data = json.dumps({
+            "model": model,
+            "messages": [
+                    {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
+                    {"role": "user", "content": prompt_content},
+                ],
+                "temperature": 0.7,
+            })
+        response = requests.post(url, data=post_data, headers=headers)
+
+        if response.status_code == 200:
+                response_data = response.json()
+                generated_content = response_data['choices'][0]['message']['content']
+                print(f"Generated content for role {role}: {generated_content}")
+                return generated_content
+        else:
+                raise Exception(f"Failed to process the request for {role} with OpenAI: {response.text}")
+
+
+
+    # Prepare the data for the POST request
+    # if model == "deepseek-r1:70b-llama-distill-q4_K_M":
+    #     payload = {
+    #         "model": model,
+    #         # "messages": [
+    #         #     {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
+    #         #     {"role": "user", "content": prompt_content},
+    #         # ],
+    #         "messages": [{"role": "user", "content": "Hello! How are you?"}],
+    #         "temperature": 0.7,
+    #         "stream": False
+    #     }
+    #     response = requests.post(url, json=payload, headers=headers)
+    
+    # else:
+    #     post_data = json.dumps({
     #     "model": model,
     #     "messages": [
-    #         {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert."},
+    #         {"role": "system", "content": f"You are a helpful assistant acting as a {role} expert capable of generating user stories and suggesting epics from the objective."},
     #         {"role": "user", "content": prompt_content},
-    #         {"role": "user", "content": f"Here is an image reference: {image_url}"}  # Use image URL in prompt
     #     ],
-    #     "temperature": 0.7
-    # })
+    #     "temperature": 0.7,
+    #     })
+    #     response = requests.post(url, data=post_data, headers=headers)
 
-    response = requests.post(url, data=post_data, headers=headers)
+    
+    # if response.status_code == 200:
+    #     response_data = response.json()
+    #     # generated_content = response_data['choices'][0]['message']['content']
+    #     if model == "deepseek-r1:70b-llama-distill-q4_K_M":
+            
+    #         print("DeepSeek Response:", response.text)  # Debugging output
+    #         if "choices" in response_data and response_data["choices"]:
+    #             generated_content = response_data["choices"][0].get("message", {}).get("content", "")
+    #         else:
+    #             raise Exception(f"Unexpected DeepSeek response format: {response_data}")
 
-    if response.status_code == 200:
-        response_data = response.json()
-        generated_content = response_data['choices'][0]['message']['content']
-        print(f"Generated content for role {role}: {generated_content}")
-        return generated_content
+    #     else:  # OpenAI and other models
+    #         generated_content = response_data['choices'][0]['message']['content']
         
-    else:
-        raise Exception(f"Failed to process the request for {role} with OpenAI: {response.text}")
+    #     print(f"Generated content for role {role}: {generated_content}")
+    #     return generated_content
+        
+    # else:
+    #     raise Exception(f"Failed to process the request for {role} with OpenAI: {response.text}")
 
+    
 
 
 

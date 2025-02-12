@@ -108,6 +108,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 print(f"sa_weight: {sa_weight}")
                 print(f"dev_weight: {dev_weight}")
                 print(f"client_feedback: {client_feedback}")
+                print(f"model name-: {model}")
 
                 if finalPrioritization is not True:
                     # Handle the original sendInput function's workflow
@@ -388,7 +389,7 @@ async def prioritize_stories_with_weightage(stories, product_owner_data, solutio
     f"- Developer: {dev_weight}% influence\n\n"
     "Focus more on the Product Owner's perspective while proportionally considering the inputs of the Solution Architect and Developer. "
     "Ensure the sum of all dollar allocations equals exactly 100.\n\n"
-    "Return the prioritized stories in this format:\n"
+    "Strictly Return the prioritized stories in this format:\n"
     "- Story ID X: dollars Y\n"
     "- Story ID Z: dollars W\n\n"
     "The number of prioritized stories and the total dollar allocation must match the number of input stories and 100 dollars, respectively."
@@ -603,7 +604,9 @@ async def generate_user_stories(request: Request):
 
 
     # print("agents datata", agents)
-    roles = [agent["role"] for agent in agents]
+    # roles = [agent["role"] for agent in agents]
+
+    roles = ['Product Owner']
 
     print("rolesahah",roles)  
     # return
@@ -825,4 +828,4 @@ app = Starlette(debug=True, middleware=[
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app,host='0.0.0.0', port=8001)
+    uvicorn.run(app,host='0.0.0.0', port=8000)
