@@ -70,6 +70,7 @@ button:focus-visible {
   overflow-x: scroll;
 } */
 
+
 .footerFixed{
   position: fixed;
   height: 30px !important;

@@ -4,6 +4,9 @@
 
 body {
   margin: 0 !important;
+  
+  font-family:  Helvetica;
+
 }
 
 html, body {
@@ -86,6 +89,12 @@ html, body {
   margin-left: 10px;
   margin-right: 10px;
 } */
+.docx-container {
+  font-family: "Arial", sans-serif;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 
 .chat-message-left .message-content {
   background-color: #e6f7ff;

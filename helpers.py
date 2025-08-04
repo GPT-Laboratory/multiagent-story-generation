@@ -6,6 +6,7 @@ import random
 import logging
 import os
 import csv
+from dotenv import load_dotenv
 from openai import OpenAI
 import requests
 from starlette.datastructures import UploadFile
@@ -17,14 +18,23 @@ import pdfplumber
 
 GPT_API_KEY = os.getenv("GPT_API_KEY")
 
-from agent import OPENAI_URL
+# from agent import OPENAI_URL
 LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+
 
 # from app import send_to_llm
 
+load_dotenv()
+
+
 # Load environment variables from .env file
 api_keys = [os.getenv(f"API-KEY{i}") for i in range(1, 4)]
+# api_keys = [os.getenv(f"API-KEY{i}") for i in range(1, 3)]
+# api_keys = os.getenv("API-KEY1")
 llama_keys = [os.getenv(f"LLAMA-key{i}") for i in range(1, 3)]
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 print("API Keys: in ", api_keys)
 print("GROQ keys : in ", llama_keys)
@@ -122,87 +132,142 @@ def construct_ahp_prompt(data, topic_response, context_response):
     return prompt
 
 
-# async def send_to_llm(prompt, headers, model, timeout=100):
-#     if model.startswith("llama3") or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
-#         url = LLAMA_URL
-#         headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
-#     elif model == "deepseek-r1:7b":
-#         # Initialize OpenAI client for DeepSeek model
-#         client = OpenAI(
-#             base_url='https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1',
-#             api_key=GPT_API_KEY
-#         )
 
-#         response = client.chat.completions.create(
-#             model=model,
-#             messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}]
-#         )
 
-#         generated_content = response.choices[0].message.content
-#         print(f"Generated response using DeepSeek: {generated_content}")
-#         return generated_content
-#     else:
-#         url = OPENAI_URL
-#         headers["Authorization"] = f"Bearer {random.choice(api_keys)}"
+   
+async def send_to_llm(prompt, headers, model, prioritization_type, timeout=100):
+    print("prioritization_type name", prompt)
     
-#     post_data = {
-#         "model": model,
-#         "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}],
-#         "temperature": 0.7
-#     }
-    
-#     response = requests.post(url, json=post_data, headers=headers, timeout=timeout)
-    
-#     if response.status_code == 200:
-#         completion = response.json()
-#         completion_text = completion['choices'][0]['message']['content']
-#         return completion_text
-#     else:
-#         raise Exception("Failed to process the request with OpenAI")
-    
-async def send_to_llm(prompt, headers, model, timeout=100):
-    format_instruction = """
-    Please format your response in the following way:
 
-    ```
-    - Story ID 1: 10 dollars
-    - Story ID 2: 8 dollars
-    - Story ID 3: 12 dollars
-    - Story ID 4: 5 dollars
-    ```
-    
-    Ensure:
-    1. The story IDs follow the format: `- Story ID X: Y dollars`
-    2. No extra explanations or calculations in the response.
-    3. The sum of all allocated dollars should be exactly 100.
-    """
+    # if prioritization_type == "100_DOLLAR":
+    #     format_instruction = """
+    #     Please format your response in the following way:
+        
+    #     ```
+    #     - Story ID 1: 10 dollars
+    #     - Story ID 2: 8 dollars
+    #     - Story ID 3: 12 dollars
+    #     - Story ID 4: 5 dollars
+    #     ```
+        
+    #     Ensure:
+    #     1. The story IDs follow the format: `- Story ID X: Y dollars`
+    #     2. No extra explanations or calculations in the response.
+    #     3. The sum of all allocated dollars should be exactly 100.
+    #     """
+    # elif prioritization_type == "WSJF":
+    #     format_instruction = """
+    #     Please format your response in the following way:
+        
+    #     ```
+    #     - Story ID X: (Epic: Y)
+    #       - Business Value (BV): Z
+    #       - Time Criticality (TC): W
+    #       - Risk Reduction/Opportunity Enablement (RR/OE): V
+    #       - Job Size (JS): U
+        
+    #     - WSJF Score: (BV + TC + RR/OE) / JS
+    #     ```
+        
+    #     Ensure:
+    #     1. Use the provided format strictly.
+    #     2. No extra explanations or calculations in the response.
+    #     """
+    # elif prioritization_type == "WSM":
+    #     format_instruction = """
+    #     Please format your response in the following way:
+        
+    #     ```
+    #     - Story ID X: (Epic: Y)
+    #       - Business Value (BV): Z
+    #       - Feasibility: W
+    #       - Strategic Alignment: V
+    #       - Risk & Compliance: U
+    #       - Scalability: T
+        
+    #     - WSM Score: (BV * 0.3) + (Feasibility * 0.2) + (Strategic Alignment * 0.25) + (Risk & Compliance * 0.15) + (Scalability * 0.1)
+    #     ```
+        
+    #     Ensure:
+    #     1. Use the provided format strictly.
+    #     2. No extra explanations or calculations in the response.
+    #     """
 
+
+    if prioritization_type == "100_DOLLAR":
+        format_instruction = """
+        Please format your response in the following way:
+        
+        ```
+        - Story ID 1: 10 dollars
+        - Story ID 2: 8 dollars
+        - Story ID 3: 12 dollars
+        - Story ID 4: 5 dollars
+        ```
+        
+        Ensure:
+        1. The story IDs follow the format: `- Story ID X: Y dollars`
+        2. No extra explanations or calculations in the response.
+        3. The sum of all allocated dollars should be exactly 100.
+        ```
+        
+        """
+    elif prioritization_type == "WSJF":
+        format_instruction = """
+        Please format your response in the following way:
+        
+        ```
+        - Story ID X: (Epic: Y)
+        - Business Value (BV): Z
+        - Time Criticality (TC): W
+        - Risk Reduction/Opportunity Enablement (RR/OE): V
+        - Job Size (JS): U
+        
+        - WSJF Score: (BV + TC + RR/OE) / JS
+        ```
+        
+        Ensure:
+        1. Use the provided format strictly.
+        2. No extra explanations or calculations in the response.
+
+        """
+    elif prioritization_type == "WSM":
+        format_instruction = """
+        Please format your response in the following way:
+        
+        ```
+        - Story ID X: (Epic: Y)
+        - Business Value (BV): Z
+        - Feasibility: W
+        - Strategic Alignment: V
+        - Risk & Compliance: U
+        - Scalability: T
+        
+        - WSM Score: (BV * 0.3) + (Feasibility * 0.2) + (Strategic Alignment * 0.25) + (Risk & Compliance * 0.15) + (Scalability * 0.1)
+        ```
+        
+        Ensure:
+        1. Use the provided format strictly.
+        2. No extra explanations or calculations in the response.
+
+        """
+
+    print("testing")
     if model.startswith("llama3") or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
-    elif model == "deepseek-r1:7b":
-        client = OpenAI(
-            base_url='https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1',
-            api_key=GPT_API_KEY
-        )
-
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "system", "content": format_instruction},  # <-- Add format instruction
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        generated_content = response.choices[0].message.content
-        print(f"Generated response using DeepSeek: {generated_content}")
-        return generated_content
+    elif model == "deepseek/deepseek-r1-distill-llama-70b":
+        print("deep working bro",model)
+        url = DEEPSEEK_URL
+        headers["Authorization"] = f"Bearer {DEEPSEEK_API_KEY}"
     else:
         url = OPENAI_URL
         headers["Authorization"] = f"Bearer {random.choice(api_keys)}"
+        # headers["Authorization"] = f"Bearer {api_keys}"
+
     
     post_data = {
+       
         "model": model,
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."},
@@ -211,15 +276,126 @@ async def send_to_llm(prompt, headers, model, timeout=100):
         ],
         "temperature": 0.7
     }
+
+   
+
+    print("post_data", post_data)
     
     response = requests.post(url, json=post_data, headers=headers, timeout=timeout)
-    
+
+    print("responsess", response)
+
     if response.status_code == 200:
         completion = response.json()
         completion_text = completion['choices'][0]['message']['content']
         return completion_text
     else:
         raise Exception("Failed to process the request with OpenAI")
+
+
+# async def send_to_llm(prompt, headers, model, prioritization_type, timeout=100):
+#     # Define the format instruction based on prioritization type
+#     if prioritization_type == "100_DOLLAR":
+#         format_instruction = """
+#         Please format your response in the following way:
+
+#         ```
+#         - Story ID 1: 10 dollars
+#         - Story ID 2: 8 dollars
+#         - Story ID 3: 12 dollars
+#         - Story ID 4: 5 dollars
+#         ```
+        
+#         Ensure:
+#         1. The story IDs follow the format: `- Story ID X: Y dollars`
+#         2. No extra explanations or calculations in the response.
+#         3. The sum of all allocated dollars should be exactly 100.
+#         """
+#     elif prioritization_type == "WSJF":
+#         format_instruction = """
+#         Please format your response as follows:
+
+#         - Story ID X: (Epic: Y)
+#           - Business Value (BV): Z
+#           - Time Criticality (TC): W
+#           - Risk Reduction/Opportunity Enablement (RR/OE): V
+#           - Job Size (JS): U
+
+#         - WSJF Score: (BV + TC + RR/OE) / JS
+#         """
+#     elif prioritization_type == "WSM":
+#         format_instruction = """
+#         Please format your response as follows:
+
+#         - Story ID X: (Epic: Y)
+#           - Business Value (BV): Z
+#           - Feasibility: W
+#           - Strategic Alignment: V
+#           - Risk & Compliance: U
+#           - Scalability: T
+
+#         - WSM Score: (BV * 0.3) + (Feasibility * 0.2) + (Strategic Alignment * 0.25) + (Risk & Compliance * 0.15) + (Scalability * 0.1)
+#         """
+#     else:
+#         raise ValueError(f"Unknown prioritization type: {prioritization_type}")
+
+#     # Choose API endpoint based on model
+#     if model.startswith("llama3") or model == "mixtral-8x7b-32768" or model == "deepseek-r1-distill-llama-70b-specdec":
+#         url = os.getenv("LLAMA_URL", "https://llama.api.endpoint")  # Replace with actual Llama API URL
+#         api_keys = os.getenv("LLAMA_KEYS", "").split(",")  # Load keys from env
+#     elif model == "deepseek-r1:7b":
+#         url = "https://gptlab.rd.tuni.fi/GPT-Lab/resources/GPU-farmi-001/v1"
+#         api_keys = [os.getenv("GPT_API_KEY")]  # Load DeepSeek API key
+#     else:
+#         url = os.getenv("OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # OpenAI default
+#         api_keys = os.getenv("OPENAI_API_KEYS", "").split(",")
+
+#     # Print API selection details
+#     print(f"\n🔹 Model Selected: {model}")
+#     print(f"🔹 API Endpoint: {url}")
+#     print(f"🔹 Available API Keys: {api_keys}")
+
+#     # Check if API keys exist
+#     if not api_keys or api_keys == [""]:
+#         raise Exception("❌ No API keys found. Please check your configuration.")
+
+#     # Select a random API key
+#     selected_key = random.choice(api_keys)
+#     print(f"✅ Using API Key: {selected_key[:6]}... (Truncated for security)")
+
+#     # Set headers
+#     headers["Authorization"] = f"Bearer {selected_key}"
+#     headers["Content-Type"] = "application/json"
+
+#     # Prepare API request payload
+#     post_data = {
+#         "model": model,
+#         "messages": [
+#             {"role": "system", "content": "You are a helpful assistant."},
+#             {"role": "system", "content": format_instruction},  # Format instruction based on prioritization
+#             {"role": "user", "content": prompt}
+#         ],
+#         "temperature": 0.7
+#     }
+
+#     # Print request payload for debugging
+#     import json
+#     print(f"\n📤 Sending Request to {url}:\n{json.dumps(post_data, indent=2)}")
+
+#     # Send request to the API
+#     response = requests.post(url, json=post_data, headers=headers, timeout=timeout)
+
+#     # Debugging: Print the response status and text
+#     print(f"\n📥 Response Status Code: {response.status_code}")
+#     print(f"📥 Response Text: {response.text}\n")
+
+#     # Check if the request was successful
+#     if response.status_code == 200:
+#         completion = response.json()
+#         completion_text = completion['choices'][0]['message']['content']
+#         return completion_text
+#     else:
+#         raise Exception(f"❌ Failed to process the request with OpenAI. Status: {response.status_code}, Response: {response.text}")
 
 
 
@@ -313,45 +489,6 @@ def construct_greetings_prompt(prioritization_technique):
     )
     return prompt
 
-# def construct_topic_prompt(stories, technique):
-#     stories_formatted = construct_stories_formatted(stories)
-#     prompt = (
-#         "PO, QA, and Developer, please discuss the following user stories and introduce the topic of the requirements:\n\n"
-#         f"{stories_formatted}\n\n"
-#         f"Please consider the prioritization technique: {technique}.\n\n"
-#     )
-#     return prompt
-
-# def construct_context_prompt(stories, technique):
-#     stories_formatted = construct_stories_formatted(stories)
-#     prompt = (
-#         "PO, QA, and Developer, please discuss the context and relevance of the following user stories:\n\n"
-#         f"{stories_formatted}\n\n"
-#         f"Please consider the prioritization technique: {technique}.\n\n "
-#     )
-#     return prompt
-
-# def construct_batch_100_dollar_prompt(data):
-#     stories_formatted = '\n'.join([
-#         f"- Story ID {story['key']}: '{story['user_story']}' {story['epic']} {story['description']}"
-#         for story in data['stories']
-#     ])
-
-#     print(stories_formatted)
-    
-#     prompt = (
-#         "You are a helpful assistant trained in prioritization techniques. "
-#         "We need to prioritize the following user stories by distributing 100 dollars (points) among them. "
-#         "The more important a story, the more dollars it should receive. "
-#         "Here are the stories:\n\n"
-#         f"{stories_formatted}\n\n"
-#         "Please distribute 100 dollars across these stories. Each dollar represents the relative importance of that story. "
-#         "Make sure the total adds up to 100 dollars. Format the output as:\n"
-#         "- Story ID X: Y dollars\n"
-#         "- Story ID Z: W dollars"
-#     )
-    
-#     return prompt
 
 def construct_topic_prompt(stories, technique):
     stories_formatted = construct_stories_formatted(stories)
@@ -386,26 +523,7 @@ def construct_batch_100_dollar_prompt(data, qa_response, dev_response, po_respon
     print(qa_response_direct)
     print(dev_response_direct)
     print(po_response_direct)
-    
-    # prompt = (
-    # "You are the Manager agent, the head of the team responsible for prioritizing user stories by distributing 100 dollars (points) among them. "
-    # "You will base your prioritization on the combined input from three agents: QA (focused on quality and testing aspects), Developer (focused on technical context and feasibility), and Product Owner (focused on business and client needs).\n\n"
-    # "To make a balanced decision, you will:\n"
-    # "- Aggregate the feedback from each agent, averaging their inputs.\n"
-    # "- Consider the complexity, importance, and alignment with the project’s vision and MVP goals.\n"
-    # "- Provide an explanation for the prioritization based on these factors.\n\n"
-    # "Here are the user stories:\n\n"
-    # f"{stories_formatted}\n\n"
-    # "Each role has provided their input based on their expertise:\n\n"
-    # f"QA's input:\n{qa_response_direct}\n\n"
-    # f"Developer's context:\n{dev_response_direct}\n\n"
-    # f"Product Owner's perspective:\n{po_response_direct}\n\n"
-    # "Please distribute 100 dollars across these stories. Each dollar represents the relative importance of that story. "
-    # "Make sure the total adds up to 100 dollars. Your response should strictly follow this format:\n"
-    # "- Story ID X: Y dollars\n"
-    # "- Story ID Z: W dollars\n\n"
-    # "After the dollar allocation, provide a summary explanation for the distribution, outlining how the feedback from the three agents, along with complexity and alignment with project goals, influenced the prioritization."
-    # )
+   
 
     prompt = (
     "You are the Manager agent, responsible for prioritizing user stories by distributing exactly 100 dollars among them. "
@@ -437,40 +555,11 @@ def construct_batch_100_dollar_prompt(data, qa_response, dev_response, po_respon
     return prompt
    
 
-# def construct_batch_100_dollar_prompt(data, topic_response, context_response):
-#     stories_formatted = '\n'.join([
-#         f"- Story ID {story['key']}: '{story['user_story']}' {story['epic']} {story['description']}"
-#         for story in data['stories']
-#     ])
 
-#     topic_response_formatted = '\n'.join([f"- {response}" for response in topic_response])
-#     context_response_formatted = '\n'.join([f"- {response}" for response in context_response])
-
-#     print(stories_formatted)
-#     print(topic_response_formatted)
-#     print(context_response_formatted)
-    
-#     prompt = (
-#         "You are a helpful assistant trained in prioritization techniques. "
-#         "We need to prioritize the following user stories by distributing 100 dollars (points) among them. "
-#         "The more important a story, the more dollars it should receive. "
-#         "Here are the stories:\n\n"
-#         f"{stories_formatted}\n\n"
-#         "Previously, the following points were discussed regarding prioritization:\n"
-#         f"{topic_response_formatted}\n\n"
-#         "Additionally, here is the context from prior discussions:\n"
-#         f"{context_response_formatted}\n\n"
-#         "Please distribute 100 dollars across these stories. Each dollar represents the relative importance of that story. "
-#         "Make sure the total adds up to 100 dollars. Format the output as:\n"
-#         "- Story ID X: Y dollars\n"
-#         "- Story ID Z: W dollars\n\n"
-#         "Critique: Explain why the agents prioritize the user stories in this way. What are the reasons behind their prioritization decisions?"
-#     )
-    
-#     return prompt
 
 def parse_100_dollar_response(response_text):
     # pattern = re.compile(r"- Story ID (\d+): .*?(\d+) dollars")
+    print("for parsing ", response_text)
     pattern = re.compile(r"- Story ID (\d+): (\d+) dollars")
     dollar_distribution = []
 
@@ -483,6 +572,38 @@ def parse_100_dollar_response(response_text):
 
     return dollar_distribution
 
+
+# def parse_100_dollar_response(response_text):
+#     # Pattern to extract story IDs and dollar allocations
+#     story_pattern = re.compile(r"- Story ID (\d+): (\d+) dollars")
+#     # Pattern to extract Kendall Tau metrics (updated to handle non-numeric values)
+#     kendall_pattern = re.compile(r"- Kendall Tau Metrics: Best Average = (.+), Best Pair = (.+)")
+
+#     dollar_distribution = []
+#     best_average = None
+#     best_pair = None
+
+#     # Extract story IDs and dollar allocations
+#     for match in story_pattern.finditer(response_text):
+#         story_id, dollars = match.groups()
+#         dollar_distribution.append({
+#             'story_id': int(story_id),
+#             'dollars': int(dollars)
+#         })
+
+#     # Extract Kendall Tau metrics
+#     kendall_match = kendall_pattern.search(response_text)
+#     if kendall_match:
+#         best_average = kendall_match.group(1).strip()  # Extract and strip whitespace
+#         best_pair = kendall_match.group(2).strip()    # Extract and strip whitespace
+
+#     return {
+#         'dollar_distribution': dollar_distribution,
+#         'best_average': best_average,
+#         'best_pair': best_pair
+#     }
+
+
 def validate_dollar_distribution(dollar_distribution, stories):
     total_dollars = sum(dist['dollars'] for dist in dollar_distribution)
     story_ids = {story['key'] for story in stories}
@@ -493,27 +614,87 @@ def validate_dollar_distribution(dollar_distribution, stories):
 def enrich_stories_with_dollar_distribution(original_stories, dollar_distribution):
     dollar_dict = {dist['story_id']: dist['dollars'] for dist in dollar_distribution}
 
+    print("dollar dis",dollar_dict)
+
+    # print("stories", original_stories)
+
+    # Enrich each story with dollar allocation
     enriched_stories = []
     for story in original_stories:
-        story_id = story['key'] + 1 
-        story['dollar_allocation'] = dollar_dict.get(story_id, 0)
+        if 'key' in story:
+            story_id = story['key'] + 1  # Assuming 'key' starts from 0
+        elif '_id' in story:
+            story_id = story['_id']  # Use '_id' directly
+        else:
+            story_id = None  # If neither 'key' nor '_id' is present
+
+        # Assign dollar allocation, default to 0 if story_id is not found
+        story['dollar_allocation'] = dollar_dict.get(story_id, 0) if story_id is not None else 0
         enriched_stories.append(story)
 
     # Sort the enriched stories by dollar_allocation in descending order
     enriched_stories.sort(key=lambda x: x['dollar_allocation'], reverse=True)
+
+    print("enrish", enriched_stories)
     
     return enriched_stories
+
+
+# def enrich_stories_with_dollar_distribution(original_stories, dollar_distribution):
+#     # Extract dollar distribution, best_average, and best_pair from the input
+#     dollar_dict = {dist['story_id']: dist['dollars'] for dist in dollar_distribution['dollar_distribution']}
+#     best_average = dollar_distribution.get('best_average', None)
+#     best_pair = dollar_distribution.get('best_pair', None)
+
+#     print("stories", original_stories)
+
+#     # Enrich each story with dollar allocation, best_average, and best_pair
+#     enriched_stories = []
+#     for story in original_stories:
+#         if 'key' in story:
+#             story_id = story['key'] + 1  # Assuming 'key' starts from 0
+#         elif '_id' in story:
+#             story_id = story['_id']  # Use '_id' directly
+#         else:
+#             story_id = None  # If neither 'key' nor '_id' is present
+
+#         # Assign dollar allocation, default to 0 if story_id is not found
+#         story['dollar_allocation'] = dollar_dict.get(story_id, 0) if story_id is not None else 0
+
+#         # Add best_average and best_pair to each story
+#         story['best_average'] = best_average
+#         story['best_pair'] = best_pair
+
+#         enriched_stories.append(story)
+
+#     # Sort the enriched stories by dollar_allocation in descending order
+#     enriched_stories.sort(key=lambda x: x['dollar_allocation'], reverse=True)
+
+#     # Add all enriched stories to both arrays
+#     array_one = enriched_stories
+    
+
+#     return array_one
 
 
 def enrich_agents_stories_with_dollar_distribution(original_stories, dollar_distribution):
     # Create a dictionary from dollar_distribution for quick lookup
     dollar_dict = {dist['story_id']: dist['dollars'] for dist in dollar_distribution}
 
+    print("stories", original_stories)
+
     # Enrich each story with dollar allocation
     enriched_stories = []
     for story in original_stories:
-        story_id = story['key'] + 1  # Assuming 'key' starts from 0
-        story['dollar_allocation'] = dollar_dict.get(story_id, 0)  # Default to 0 if not found
+        if 'key' in story:
+            story_id = story['key'] + 1  # Assuming 'key' starts from 0
+        elif '_id' in story:
+            story_id = story['_id']  # Use '_id' directly
+        else:
+            story_id = None  # If neither 'key' nor '_id' is present
+
+        # Assign dollar allocation, default to 0 if story_id is not found
+        story['dollar_allocation'] = dollar_dict.get(story_id, 0) if story_id is not None else 0
         enriched_stories.append(story)
 
     # Sort the enriched stories by dollar_allocation in descending order
@@ -525,8 +706,41 @@ def enrich_agents_stories_with_dollar_distribution(original_stories, dollar_dist
 
     return array_one, array_two
 
+# def enrich_agents_stories_with_dollar_distribution(original_stories, dollar_distribution):
+#     # Extract dollar distribution, best_average, and best_pair from the input
+#     dollar_dict = {dist['story_id']: dist['dollars'] for dist in dollar_distribution['dollar_distribution']}
+#     best_average = dollar_distribution.get('best_average', None)
+#     best_pair = dollar_distribution.get('best_pair', None)
 
+#     print("stories", original_stories)
 
+#     # Enrich each story with dollar allocation, best_average, and best_pair
+#     enriched_stories = []
+#     for story in original_stories:
+#         if 'key' in story:
+#             story_id = story['key'] + 1  # Assuming 'key' starts from 0
+#         elif '_id' in story:
+#             story_id = story['_id']  # Use '_id' directly
+#         else:
+#             story_id = None  # If neither 'key' nor '_id' is present
+
+#         # Assign dollar allocation, default to 0 if story_id is not found
+#         story['dollar_allocation'] = dollar_dict.get(story_id, 0) if story_id is not None else 0
+
+#         # Add best_average and best_pair to each story
+#         story['best_average'] = best_average
+#         story['best_pair'] = best_pair
+
+#         enriched_stories.append(story)
+
+#     # Sort the enriched stories by dollar_allocation in descending order
+#     enriched_stories.sort(key=lambda x: x['dollar_allocation'], reverse=True)
+
+#     # Add all enriched stories to both arrays
+#     array_one = enriched_stories
+#     array_two = enriched_stories
+
+#     return array_one, array_two
 
 def construct_stories_formatted(stories):
     return '\n'.join([
@@ -546,7 +760,7 @@ def ensure_unique_keys(stories):
     return stories
 
 
-async def estimate_wsjf_final_Prioritization(data, stories, websocket, model):
+async def estimate_wsjf_final_Prioritization(data, stories, websocket, model, prioritization_type):
     headers = {
         "Authorization": f"Bearer {random.choice(api_keys)}",
         "Content-Type": "application/json"
@@ -554,8 +768,8 @@ async def estimate_wsjf_final_Prioritization(data, stories, websocket, model):
     
     # prioritize_prompt = construct_batch_wsjf_prompt(data, topic_response, context_response)
     #logger.info(f"Prioritize Prompt:\n{prioritize_prompt}")  # Debugging print
-    estimated_factors = await send_to_llm(data, headers, model)
-    # await stream_response_word_by_word(websocket, estimated_factors, "Final Prioritization")
+    estimated_factors = await send_to_llm(data, headers, model, prioritization_type)
+    await stream_response_word_by_word(websocket, estimated_factors, "Final Prioritization")
     #logger.info(f"Estimated Factor:\n{estimated_factors}")
 
     print("Estimated Factors list: ", estimated_factors)
@@ -572,7 +786,7 @@ async def estimate_wsjf_final_Prioritization(data, stories, websocket, model):
     return enriched_stories
     
 
-async def estimate_wsjf(data, stories, websocket, model):
+async def estimate_wsjf(data, stories, websocket, model, prioritization_type):
     headers = {
         "Authorization": f"Bearer {random.choice(api_keys)}",
         "Content-Type": "application/json"
@@ -580,7 +794,7 @@ async def estimate_wsjf(data, stories, websocket, model):
     
     # prioritize_prompt = construct_batch_wsjf_prompt(data, topic_response, context_response)
     #logger.info(f"Prioritize Prompt:\n{prioritize_prompt}")  # Debugging print
-    estimated_factors = await send_to_llm(data, headers, model)
+    estimated_factors = await send_to_llm(data, headers, model, prioritization_type)
     # await stream_response_word_by_word(websocket, estimated_factors, "Final Prioritization")
     #logger.info(f"Estimated Factor:\n{estimated_factors}")
 
@@ -688,6 +902,53 @@ def parse_wsjf_response(response_text):
     
     return wsjf_factors
 
+
+
+# def parse_wsjf_response(response_text):
+#     # Pattern to extract WSJF factors and scores
+#     wsjf_pattern = re.compile(
+#         r"- Story ID (\d+): \(Epic: .+?\)\s*"
+#         r"- Business Value \(BV\): (\d+)\s*"
+#         r"- Time Criticality \(TC\): (\d+)\s*"
+#         r"- Risk Reduction/Opportunity Enablement \(RR/OE\): (\d+)\s*"
+#         r"- Job Size \(JS\): (\d+)\s*"
+#         r"- WSJF Score: ([\d.]+)\s*"
+#     )
+
+#     # Pattern to extract Kendall Tau metrics
+#     kendall_pattern = re.compile(r"- Kendall Tau Metrics: Best Average = (.+), Best Pair = (.+)")
+
+#     wsjf_factors = []
+#     best_average = None
+#     best_pair = None
+
+#     # Extract WSJF factors and scores
+#     for match in wsjf_pattern.finditer(response_text):
+#         story_id, bv, tc, rr_oe, js, wsjf_score = match.groups()
+
+#         wsjf_factors.append({
+#             'story_id': int(story_id),
+#             'wsjf_factors': {
+#                 'BV': int(bv),
+#                 'TC': int(tc),
+#                 'RR/OE': int(rr_oe),
+#                 'JS': int(js),
+#             },
+#             'wsjf_score': float(wsjf_score)
+#         })
+
+#     # Extract Kendall Tau metrics
+#     kendall_match = kendall_pattern.search(response_text)
+#     if kendall_match:
+#         best_average = kendall_match.group(1).strip()  # Extract and strip whitespace
+#         best_pair = kendall_match.group(2).strip()    # Extract and strip whitespace
+
+#     return {
+#         'wsjf_factors': wsjf_factors,
+#         'best_average': best_average,
+#         'best_pair': best_pair
+#     }
+
 def validate_wsjf_response(wsjf_factors, stories):
     story_ids = {story['key'] for story in stories}
     response_story_ids = {factor['story_id'] for factor in wsjf_factors}
@@ -716,7 +977,7 @@ def validate_wsjf_response(wsjf_factors, stories):
 #             story['bv'] = bv
 #             story['tc'] = tc
 #             story['oe'] = rr_oe
-#             story['js'] =  js 
+#             story['js'] = js 
 
 #             logger.info(f"Story ID {story_id} WSJF factors: {wsjf_data}, WSJF score: {wsjf_score}")
 #         else:
@@ -733,25 +994,32 @@ def validate_wsjf_response(wsjf_factors, stories):
 
 #         enriched_stories.append(story)
 
-#     # enriched_stories = sort_stories_by_wsjf_in_place(enriched_stories)
+#     # Sort the enriched stories by WSJF score
 #     sorted_stories = sort_stories_by_wsjf_in_place(enriched_stories)
 
 #     # Return two arrays with the same enriched stories
 #     array_one = sorted_stories
 #     array_two = sorted_stories
-#     # return enriched_stories
+
 #     return array_one, array_two
 
-
 def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
+    # Create a dictionary from wsjf_factors for quick lookup
     wsjf_dict = {factor['story_id']: factor['wsjf_factors'] for factor in wsjf_factors}
     logger.info(f"Original stories:\n{original_stories}")
     logger.info(f"WSJF factors dictionary:\n{wsjf_dict}")
 
     enriched_stories = []
     for story in original_stories:
-        story_id = story['key']
-        if story_id in wsjf_dict:
+        # Determine story_id based on 'key' or '_id'
+        if 'key' in story:
+            story_id = story['key']  # Use 'key' directly
+        elif '_id' in story:
+            story_id = story['_id']  # Use '_id' directly
+        else:
+            story_id = None  # If neither 'key' nor '_id' is present
+
+        if story_id and story_id in wsjf_dict:
             wsjf_data = wsjf_dict[story_id]
             story['wsjf_factors'] = wsjf_data
             bv = wsjf_data['BV']
@@ -763,10 +1031,11 @@ def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
             story['bv'] = bv
             story['tc'] = tc
             story['oe'] = rr_oe
-            story['js'] = js 
+            story['js'] = js
 
             logger.info(f"Story ID {story_id} WSJF factors: {wsjf_data}, WSJF score: {wsjf_score}")
         else:
+            # Default values if story_id is not found or invalid
             story['wsjf_factors'] = {
                 'BV': 0,
                 'TC': 0,
@@ -776,8 +1045,11 @@ def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
             story['wsjf_score'] = 0
             story['bv'] = 0
             story['tc'] = 0
+            story['oe'] = 0
+            story['js'] = 0
             logger.warning(f"Story ID {story_id} not found in WSJF factors")
 
+       
         enriched_stories.append(story)
 
     # Sort the enriched stories by WSJF score
@@ -789,7 +1061,6 @@ def enrich_original_stories_with_wsjf(original_stories, wsjf_factors):
 
     return array_one, array_two
 
-
 def enrich_original_stories_with_wsjf_final_prioritization(original_stories, wsjf_factors):
     wsjf_dict = {factor['story_id']: factor['wsjf_factors'] for factor in wsjf_factors}
     logger.info(f"Original stories:\n{original_stories}")
@@ -797,8 +1068,15 @@ def enrich_original_stories_with_wsjf_final_prioritization(original_stories, wsj
 
     enriched_stories = []
     for story in original_stories:
-        story_id = story['key']
-        if story_id in wsjf_dict:
+        # Determine story_id based on 'key' or '_id'
+        if 'key' in story:
+            story_id = story['key']  # Use 'key' directly
+        elif '_id' in story:
+            story_id = story['_id']  # Use '_id' directly
+        else:
+            story_id = None  # If neither 'key' nor '_id' is present
+
+        if story_id and story_id in wsjf_dict:
             wsjf_data = wsjf_dict[story_id]
             story['wsjf_factors'] = wsjf_data
             bv = wsjf_data['BV']
@@ -810,10 +1088,11 @@ def enrich_original_stories_with_wsjf_final_prioritization(original_stories, wsj
             story['bv'] = bv
             story['tc'] = tc
             story['oe'] = rr_oe
-            story['js'] = js 
+            story['js'] = js
 
             logger.info(f"Story ID {story_id} WSJF factors: {wsjf_data}, WSJF score: {wsjf_score}")
         else:
+            # Default values if story_id is not found or invalid
             story['wsjf_factors'] = {
                 'BV': 0,
                 'TC': 0,
@@ -823,12 +1102,15 @@ def enrich_original_stories_with_wsjf_final_prioritization(original_stories, wsj
             story['wsjf_score'] = 0
             story['bv'] = 0
             story['tc'] = 0
+            story['oe'] = 0
+            story['js'] = 0
             logger.warning(f"Story ID {story_id} not found in WSJF factors")
 
         enriched_stories.append(story)
 
     # Sort the enriched stories by WSJF score
     enriched_stories = sort_stories_by_wsjf_in_place(enriched_stories)
+
     return enriched_stories
 
 
@@ -839,6 +1121,7 @@ def sort_stories_by_wsjf_in_place(enriched_stories):
     logger.info(f"Append and Sorted:\n{enriched_sorted_stories}")
     return enriched_sorted_stories
 
+# 
 
 def save_uploaded_file(upload_folder: str, file: UploadFile):
     # Validate file extensions
@@ -1122,38 +1405,111 @@ async def stream_response_word_by_word(websocket, response, agent_type, delay=0.
         await asyncio.sleep(delay)  # Delay to simulate streaming effect  
 
 
+# def construct_product_owner_prompt(data, vision, mvp, rounds, first_agent_name, first_agent_prompt, client_feedback=None):
+#     stories_formatted = '\n'.join([
+#         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
+#         for index, story in enumerate(data['stories'])
+#     ])
+
+#     print("first_agent_prompt_is:", first_agent_prompt)
+
+#     feedback_section = ""
+#     if client_feedback:
+#         feedback_section = "As you prioritize, consider the following feedback provided by the client:\n\n" + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
+
+#     print("Formatted Stories:")
+#     print(stories_formatted)
+#     if feedback_section:
+#         print("Client Feedback:")
+#         print(feedback_section)
+
+#     print("roundss:", rounds)
+
+#     rounds = int(rounds)
+
+#     # Generate the rounds section dynamically based on num_rounds
+#     rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
+    
+#     # Generate the pairwise comparison section dynamically
+#     pairwise_section = []
+#     for i in range(rounds):
+#         for j in range(i+1, rounds):
+#             pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+#     pairwise_section = "\n".join(pairwise_section)
+
+#     # Generate the rounds section dynamically based on num_rounds
+   
+
+
+#     prompt = (
+#         f"You are {first_agent_name}.\n\n"
+#         f"{first_agent_prompt}\n\n"
+#         "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
+#         f"### Product Vision:\n{vision}\n\n"
+#         f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
+#         f"{feedback_section}"
+#         "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a business and product perspective. "
+#         "Ensure the total equals exactly 100 dollars. Use this format:\n"
+#         "- ID X: Y dollars\n"
+#         "- ID Z: W dollars\n\n"
+#         "Here are the stories:\n\n"
+#         f"{stories_formatted}\n\n"
+#         "---\n"
+#         "### Instructions:\n"
+#         f"1. Perform the prioritization *{rounds} times*, revising priorities to account for changes in business goals or new insights.\n"
+#         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
+#         "- ID X: Y dollars\n"
+#         "- ID Z: W dollars\n\n"
+#         "### Average Kendall Tau Distance:\n"
+#         "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
+#         "| Round  | Average Kendall Tau Distance |\n"
+#         "|--------|-----------------------------|\n"
+#         f"{rounds_section}\n\n"
+#         "Analyze the consistency of rankings across rounds based on these values.\n\n"
+#         "### Pairwise Kendall Tau Distance:\n"
+#         "Additionally, provide the *pairwise Kendall Tau distance* between each round to understand the consistency and divergence in prioritization decisions. Present this in a table format:\n\n"
+#         "| Round Pair | Kendall Tau Distance |\n"
+#         "|------------|----------------------|\n"
+#         f"{pairwise_section}\n\n"
+#         "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
+#         "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
+#         "- ID X: Y dollars\n"
+#         "- ID Z: W dollars\n\n"
+#         "**Prioritization 1:**\n"
+#         "- ID 1: X dollars\n"
+#         "- ID 2: Y dollars\n"
+#         "...\n"
+#         "**Prioritization 2:**\n"
+#         "- ID 1: A dollars\n"
+#         "- ID 2: B dollars\n\n"
+#         "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
+#         "- How the average Kendall Tau results influenced the selection.\n"
+#         "- Observed trends or consistencies in the rankings.\n"
+#         "- How these prioritizations maximize business value, address customer needs, and support overall product strategy."
+#     )
+
+#     return prompt
+
 def construct_product_owner_prompt(data, vision, mvp, rounds, first_agent_name, first_agent_prompt, client_feedback=None):
     stories_formatted = '\n'.join([
         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
         for index, story in enumerate(data['stories'])
     ])
 
-    print("first_agent_prompt_is:", first_agent_prompt)
-
     feedback_section = ""
     if client_feedback:
         feedback_section = "As you prioritize, consider the following feedback provided by the client:\n\n" + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
 
-    print("Formatted Stories:")
-    print(stories_formatted)
-    if feedback_section:
-        print("Client Feedback:")
-        print(feedback_section)
-
-    print("roundss:", rounds)
-
     rounds = int(rounds)
 
-    # Generate the rounds section dynamically based on num_rounds
-    rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
-    
-    # Generate the pairwise comparison section dynamically
+    # Ensure Kendall Tau distances are non-zero
+    rounds_section = "\n".join([f"| Round {i+1} | {0.012 + (i * 0.005):.3f} |" for i in range(rounds)])
+
     pairwise_section = []
     for i in range(rounds):
         for j in range(i+1, rounds):
-            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | {0.015 + (i * 0.003) + (j * 0.002):.3f} |")
     pairwise_section = "\n".join(pairwise_section)
-
 
     prompt = (
         f"You are {first_agent_name}.\n\n"
@@ -1171,9 +1527,14 @@ def construct_product_owner_prompt(data, vision, mvp, rounds, first_agent_name, 
         "---\n"
         "### Instructions:\n"
         f"1. Perform the prioritization *{rounds} times*, revising priorities to account for changes in business goals or new insights.\n"
-        "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
+        "2. Each round should introduce **some variation** in prioritization to reflect changing business priorities.\n"
+        "3. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"
+        "**Important: The Kendall Tau distance should never be exactly 0.000.**\n"
+        "- Ensure **each round differs from the previous one** in a meaningful way.\n"
+        "- Even small adjustments in prioritization rankings should be introduced.\n"
+        "- If necessary, introduce slight variations in ranking weightings across rounds.\n\n"
         "### Average Kendall Tau Distance:\n"
         "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
         "| Round  | Average Kendall Tau Distance |\n"
@@ -1185,7 +1546,6 @@ def construct_product_owner_prompt(data, vision, mvp, rounds, first_agent_name, 
         "| Round Pair | Kendall Tau Distance |\n"
         "|------------|----------------------|\n"
         f"{pairwise_section}\n\n"
-        "### Final Output:\n"
         "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and alignment with business goals.\n"
         "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
         "- ID X: Y dollars\n"
@@ -1205,94 +1565,6 @@ def construct_product_owner_prompt(data, vision, mvp, rounds, first_agent_name, 
 
     return prompt
 
-
-# def construct_senior_developer_prompt(data, vision, mvp, client_feedback=None):
-#     stories_formatted = '\n'.join([
-#         f"- ID {index + 1}: '{story['user_story']}' - {story['epic']} {story['description']}"
-#         for index, story in enumerate(data['stories'])
-#     ])
-
-#     feedback_section = ""
-#     if client_feedback:
-#         feedback_section = (
-#             "As you prioritize, take into account the following feedback from the client:\n\n"
-#             + '\n'.join(['- ' + fb for fb in client_feedback]) + "\n\n"
-#         )
-
-#     print("Formatted Stories:")
-#     print(stories_formatted)
-#     if feedback_section:
-#         print("Client Feedback:")
-#         print(feedback_section)
-
-#     # prompt = (
-#     #     "You are a Senior Developer with extensive programming experience and a deep understanding of system architecture, technical dependencies, and best practices. "
-#     #     f"{feedback_section}"
-#     #     "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story. "
-#     #     "Please distribute exactly 100 dollars across these stories, ensuring the total equals exactly 100 dollars. Each dollar reflects the importance of that story from a technical perspective.\n"
-#     #     "Ensure the total adds up to 100 dollars. Use this format:\n"
-#     #     "- ID X: Y dollars\n"
-#     #     "- ID Z: W dollars\n\n"
-#     #     "Here are the stories:\n\n"
-#     #     f"{stories_formatted}\n\n"
-#     #     "---\n"
-#     #     "### Instructions:\n"
-#     #     "1. Perform the prioritization *five times*, revising priorities to account for changes in technical focus or new insights.\n"
-#     #     "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
-#     #     "- ID X: Y dollars\n"
-#     #     "- ID Z: W dollars\n\n"
-#     #     "### Comparison:\n"
-#     #     "After completing the five rounds, calculate the *Kendall Tau correlation* for all pairs of rounds (e.g., Round 1 vs. Round 2, Round 1 vs. Round 3, etc.).\n"
-#     #     "Analyze the consistency of rankings across rounds based on Kendall Tau values.\n\n"
-#     #     "### Final Output:\n"
-#     #     "1. Return the *two best prioritizations* based on Kendall Tau analysis and technical alignment.\n"
-#     #     "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
-#     #     "- ID X: Y dollars\n"
-#     #     "- ID Z: W dollars\n\n"
-#     #     "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
-#     #     "- How Kendall Tau results influenced the selection.\n"
-#     #     "- Observed trends or consistencies in the rankings.\n"
-#     #     "- How these prioritizations minimize technical risk and optimize system architecture, dependencies, and project flow."
-#     # )
-#     prompt = (
-#         "You are a Senior Developer with extensive programming experience and a deep understanding of system architecture, technical dependencies, and best practices.\n\n"
-#         "Your task is to prioritize user stories to align with the product vision and MVP scope.\n\n"
-#         f"### Product Vision:\n{vision}\n\n"
-#         f"### Minimum Viable Product (MVP):\n{mvp}\n\n"
-#         f"{feedback_section}"
-#         "Distribute 100 dollars (points) among the following user stories. Each dollar represents the relative importance of that story from a technical perspective. "
-#         "Ensure the total equals exactly 100 dollars. Use this format:\n"
-#         "- ID X: Y dollars\n"
-#         "- ID Z: W dollars\n\n"
-#         "Here are the stories:\n\n"
-#         f"{stories_formatted}\n\n"
-#         "---\n"
-#         "### Instructions:\n"
-#         "1. Perform the prioritization *five times*, revising priorities to account for changes in technical focus or new insights.\n"
-#         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
-#         "- ID X: Y dollars\n"
-#         "- ID Z: W dollars\n\n"
-#         "### Comparison:\n"
-#         "After completing the five rounds, calculate the *Kendall Tau correlation* for all pairs of rounds (e.g., Round 1 vs. Round 2, Round 1 vs. Round 3, etc.).\n"
-#         "Analyze the consistency of rankings across rounds based on Kendall Tau values.\n\n"
-#         "### Final Output:\n"
-#         "1. Return the *two best prioritizations* based on Kendall Tau analysis and technical alignment.\n"
-#         "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
-#         "- ID X: Y dollars\n"
-#         "- ID Z: W dollars\n\n"
-#         "**Prioritization 1:**\n"
-#         "- ID 1: X dollars\n"
-#         "- ID 2: Y dollars\n"
-#         "...\n"
-#         "**Prioritization 2:**\n"
-#         "- ID 1: A dollars\n"
-#         "- ID 2: B dollars\n\n"
-#         "3. Provide a *brief explanation* for why these two prioritizations were chosen, highlighting:\n"
-#         "- How Kendall Tau results influenced the selection.\n"
-#         "- Observed trends or consistencies in the rankings.\n"
-#         "- How these prioritizations minimize technical risk and optimize system architecture, dependencies, and project flow."
-#     )
-#     return prompt
 
 
 
@@ -1317,14 +1589,23 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, second_agent_na
 
     rounds = int(rounds)
 
-    # Generate the rounds section dynamically based on num_rounds
-    rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
+    # # Generate the rounds section dynamically based on num_rounds
+    # rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
     
-    # Generate the pairwise comparison section dynamically
+    # # Generate the pairwise comparison section dynamically
+    # pairwise_section = []
+    # for i in range(rounds):
+    #     for j in range(i+1, rounds):
+    #         pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+    # pairwise_section = "\n".join(pairwise_section)
+
+     # Ensure Kendall Tau distances are non-zero
+    rounds_section = "\n".join([f"| Round {i+1} | {0.012 + (i * 0.005):.3f} |" for i in range(rounds)])
+
     pairwise_section = []
     for i in range(rounds):
         for j in range(i+1, rounds):
-            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | {0.015 + (i * 0.003) + (j * 0.002):.3f} |")
     pairwise_section = "\n".join(pairwise_section)
 
     prompt = (
@@ -1346,6 +1627,10 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, second_agent_na
         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"
+        "**Important: The Kendall Tau distance should never be exactly 0.000.**\n"
+        "- Ensure **each round differs from the previous one** in a meaningful way.\n"
+        "- Even small adjustments in prioritization rankings should be introduced.\n"
+        "- If necessary, introduce slight variations in ranking weightings across rounds.\n\n"
         "### Average Kendall Tau Distance:\n"
         "Instead of showing pairwise comparisons for each round, calculate the *average Kendall Tau distance* for each round and display it in this format:\n\n"
         "| Round  | Average Kendall Tau Distance |\n"
@@ -1357,7 +1642,7 @@ def construct_senior_developer_prompt(data, vision, mvp, rounds, second_agent_na
         "| Round Pair | Kendall Tau Distance |\n"
         "|------------|----------------------|\n"
         f"{pairwise_section}\n\n"
-        "### Final Output:\n"
+       
         "1. Return the *two best prioritizations* based on the average Kendall Tau analysis and technical alignment.\n"
         "2. For each of the two best prioritizations, ensure the total adds up to 100 dollars and present them in this format:\n"
         "- ID X: Y dollars\n"
@@ -1454,14 +1739,23 @@ def construct_solution_architect_prompt(data, vision, mvp, rounds, third_agent_n
 
     rounds = int(rounds)
 
-    # Generate the rounds section dynamically based on num_rounds
-    rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
+    # # Generate the rounds section dynamically based on num_rounds
+    # rounds_section = "\n".join([f"| Round {i+1} | 0.000 |" for i in range(rounds)])
     
-    # Generate the pairwise comparison section dynamically
+    # # Generate the pairwise comparison section dynamically
+    # pairwise_section = []
+    # for i in range(rounds):
+    #     for j in range(i+1, rounds):
+    #         pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+    # pairwise_section = "\n".join(pairwise_section)
+
+    # Ensure Kendall Tau distances are non-zero
+    rounds_section = "\n".join([f"| Round {i+1} | {0.012 + (i * 0.005):.3f} |" for i in range(rounds)])
+
     pairwise_section = []
     for i in range(rounds):
         for j in range(i+1, rounds):
-            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | 0.000 |")
+            pairwise_section.append(f"| Round {i+1} vs Round {j+1} | {0.015 + (i * 0.003) + (j * 0.002):.3f} |")
     pairwise_section = "\n".join(pairwise_section)
 
     prompt = (
@@ -1483,6 +1777,10 @@ def construct_solution_architect_prompt(data, vision, mvp, rounds, third_agent_n
         "2. For each round, ensure the total adds up to 100 dollars. Use this format:\n"
         "- ID X: Y dollars\n"
         "- ID Z: W dollars\n\n"
+        "**Important: The Kendall Tau distance should never be exactly 0.000.**\n"
+        "- Ensure **each round differs from the previous one** in a meaningful way.\n"
+        "- Even small adjustments in prioritization rankings should be introduced.\n"
+        "- If necessary, introduce slight variations in ranking weightings across rounds.\n\n"
         "### Average Kendall's Tau Distance:\n"
         "After completing the rounds, calculate the *average Kendall Tau distance* for each round.\n"
         "Present the results in the following format:\n\n"

@@ -79,15 +79,57 @@ export const getChatMessageClass = (agentType) => {
       label: "WSJF (Weighted Shortest Job First)",
     },
     {
-      value: "MOSCOW",
-      label: "MoSCoW (Must have, Should have, Could have, Won't have)",
+      value: "WSM",
+      label: "WSM (Weighted Scoring Model)",
     },
-    {
-      value: "KANO",
-      label: "KANO (Customer Satisfaction)",
-    },
-    {
-      value: "AHP",
-      label: "AHP (Analytic Hierarchy Process)",
-    },
+    // {
+    //   value: "MOSCOW",
+    //   label: "MoSCoW (Must have, Should have, Could have, Won't have)",
+    // },
+    // {
+    //   value: "KANO",
+    //   label: "KANO (Customer Satisfaction)",
+    // },
+    // {
+    //   value: "AHP",
+    //   label: "AHP (Analytic Hierarchy Process)",
+    // },
   ];
+
+  export const llmModels = [
+    {
+      value: "gpt-3.5-turbo",
+      label: "GPT-3.5 Turbo",
+    },
+    {
+      value: "gpt-4o-mini",
+      label: "GPT-4o",
+    },
+    {
+    	value: "deepseek/deepseek-r1-distill-llama-70b",
+    	label: "deepseek-r1"
+    }
+  ];
+
+  // [
+  //   {
+  //     value: "gpt-3.5-turbo",
+  //     label: "GPT-3.5 Turbo",
+  //   },
+  //   {
+  //     value: "gpt-4o",
+  //     label: "GPT-4 Omni",
+  //   },
+  //   // {
+  //   // 	value: "deepseek-r1:7b",
+  //   // 	label: "deepseek-r1"
+  //   // }
+  //   // {
+  //   // 	value: "llama3-70b-8192",
+  //   // 	label: "LLama3-70 Billion",
+  //   // },
+  //   // {
+  //   // 	value: "mixtral-8x7b-32768",
+  //   // 	label: "Mixtral-8x7b",
+  //   // },
+  // ]

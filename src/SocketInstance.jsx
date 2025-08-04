@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 
 const protocol = window.location.protocol; // 'http:' or 'https:'
 const host = window.location.hostname; // Gets the domain name or IP
-const port = 8001;
+const port = 8000;
 const socketPath = "/socket.io/"; // Matches your Caddy reverse proxy path
 export  const socketURL = `ws://${host}:${port}`; // If no port, use `${protocol}//${host}`
 // export const socketURL = `ws://${host}`;

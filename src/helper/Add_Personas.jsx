@@ -2,7 +2,7 @@
 
 import { Form, Input, Button, Breadcrumb } from 'antd';
 import React, { useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 
 const Add_Personas = () => {
     const inputRef = useRef(null);
@@ -10,6 +10,7 @@ const Add_Personas = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const personaToEdit = location.state?.persona || null;
+    const { id } = useParams();
 
     useEffect(() => {
         inputRef.current?.focus();
@@ -32,6 +33,7 @@ const Add_Personas = () => {
                 taskLabel: task.taskLabel || task.taskName,
                 prompt: task.prompt,
             })),
+            project_id: id
         };
 
         try {
@@ -52,7 +54,7 @@ const Add_Personas = () => {
 
             if (response.ok) {
                 form.resetFields();
-                navigate("/agent_list");
+                navigate(`/agent_list/${id}`);
             }
         } catch (error) {
             console.error("Error saving persona:", error);
@@ -66,9 +68,9 @@ const Add_Personas = () => {
                 items={[
                     { title: <Link to="/">Home</Link> },
                     { type: 'separator' },
-                    { title: <Link to="/agent_list">Agents List</Link> },
+                    { title: <Link to={`/agent_list/${id}`}>Agents List</Link> },
                     { type: 'separator' },
-                    { title: <Link to="/add_agent">Add Agent</Link> },
+                    { title: <Link to={`/add_agent/${id}`}>Add Agent</Link> },
                 ]}
             />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>

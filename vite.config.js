@@ -7,7 +7,7 @@ export default defineConfig({
   server:{
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8001',  // Ensure this matches your backend port
+        target: 'http://127.0.0.1:8000',  // Ensure this matches your backend port
         changeOrigin: true,
         secure: false,
       }

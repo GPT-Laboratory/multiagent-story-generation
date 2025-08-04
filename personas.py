@@ -1,19 +1,26 @@
-# import json
-# from fastapi import HTTPException, Request
-# from fastapi.responses import JSONResponse
-# from motor.motor_asyncio import AsyncIOMotorClient
-# from bson import ObjectId
-
-# MONGO_URI = "mongodb+srv://reactblog:NDpmDZiPiC3goILD@cluster0.7na1v62.mongodb.net/MVP?retryWrites=true&w=majority&appName=Cluster0"
-# client = AsyncIOMotorClient(MONGO_URI)
-# db = client["MVP"]  # Database name
-# personas_collection = db["personas"]
+import json
+import os
+from dotenv import load_dotenv
+from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
+from motor.motor_asyncio import AsyncIOMotorClient
+from bson import ObjectId
 
 
-# # Example function to fetch personas
-# def convert_objectid(persona):
-#     persona["_id"] = str(persona["_id"])  # Convert ObjectId to string
-#     return persona
+
+
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+client = AsyncIOMotorClient(MONGO_URI)
+db = client["MVP"]  # Database name
+personas_collection = db["personas"]
+
+
+# Example function to fetch personas
+def convert_objectid(persona):
+    persona["_id"] = str(persona["_id"])  # Convert ObjectId to string
+    return persona
 
 # async def get_personas(request):
 #     personas_cursor = personas_collection.find()  # Get the async cursor
@@ -22,52 +29,66 @@
 #     # Wrap the list in a JSONResponse before returning
 #     return JSONResponse(content=personas_list)
 
+async def get_personas(request):
+    try:
+        project_id = request.path_params.get("project_id")  # Extract from URL
+        print(f"Received project_id: {project_id}")  # Debugging step
 
-# # Handler to add a new persona
-# async def add_persona(request):
-#     data = await request.json()
-#     result = await personas_collection.insert_one(data)
-#     return JSONResponse({"message": "Persona added", "id": str(result.inserted_id)})
+        if not project_id:
+            return JSONResponse(content={"error": "Project ID is required"}, status_code=400)
 
-# # Handler to delete persona
-# async def delete_persona(request: Request):
-#     persona_id = request.path_params.get("persona_id")  # Extract persona_id from request params
-#     if not ObjectId.is_valid(persona_id):  # Ensure it's a valid ObjectId
-#         return JSONResponse({"error": "Invalid persona ID"}, status_code=400)
+        # Query MongoDB for personas linked to this project
+        personas_cursor = personas_collection.find({"project_id": project_id})
+        personas_list = await personas_cursor.to_list(length=None)
+        personas_list = [convert_objectid(persona) for persona in personas_list]
 
-#     result = await personas_collection.delete_one({"_id": ObjectId(persona_id)})
+        return JSONResponse(content=personas_list)
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     
-#     if result.deleted_count == 0:
-#         return JSONResponse({"error": "Persona not found"}, status_code=404)
+
+# Handler to add a new persona
+async def add_persona(request):
+    data = await request.json()
+    result = await personas_collection.insert_one(data)
+    return JSONResponse({"message": "Persona added", "id": str(result.inserted_id)})
+
+# Handler to delete persona
+async def delete_persona(request: Request):
+    persona_id = request.path_params.get("persona_id")  # Extract persona_id from request params
+    if not ObjectId.is_valid(persona_id):  # Ensure it's a valid ObjectId
+        return JSONResponse({"error": "Invalid persona ID"}, status_code=400)
+
+    result = await personas_collection.delete_one({"_id": ObjectId(persona_id)})
     
-#     return JSONResponse({"message": "Persona deleted successfully"})
+    if result.deleted_count == 0:
+        return JSONResponse({"error": "Persona not found"}, status_code=404)
+    
+    return JSONResponse({"message": "Persona deleted successfully"})
 
-# # Handler to update persona
-# async def update_persona(request: Request):
-#     persona_id = request.path_params.get("persona_id")  # Extract persona_id from URL
+# Handler to update persona
+async def update_persona(request: Request):
+    persona_id = request.path_params.get("persona_id")  # Extract persona_id from URL
 
-#     if not ObjectId.is_valid(persona_id):  # Ensure it's a valid ObjectId
-#         return JSONResponse({"error": "Invalid persona ID"}, status_code=400)
+    if not ObjectId.is_valid(persona_id):  # Ensure it's a valid ObjectId
+        return JSONResponse({"error": "Invalid persona ID"}, status_code=400)
 
-#     update_data = await request.json()  # Extract JSON data from request body
+    update_data = await request.json()  # Extract JSON data from request body
 
-#     result = await personas_collection.update_one(
-#         {"_id": ObjectId(persona_id)},  # Find by ID
-#         {"$set": update_data}  # Update data
-#     )
+    result = await personas_collection.update_one(
+        {"_id": ObjectId(persona_id)},  # Find by ID
+        {"$set": update_data}  # Update data
+    )
 
-#     if result.matched_count == 0:
-#         return JSONResponse({"error": "Persona not found"}, status_code=404)
+    if result.matched_count == 0:
+        return JSONResponse({"error": "Persona not found"}, status_code=404)
 
-#     return JSONResponse({"message": "Persona updated successfully"})
+    return JSONResponse({"message": "Persona updated successfully"})
 
 
-import json
-from fastapi import HTTPException, Request
-from fastapi.responses import JSONResponse
-
-# In-memory storage for personas
-personas = [
+# # In-memory storage for personas
+personas_list = [
     {
         "_id": "1",
         "name": "PO",
@@ -179,43 +200,3 @@ personas = [
         ]
     },
 ]
-
-def convert_objectid(persona):
-    persona["_id"] = str(persona["_id"])  # Ensure ID is string
-    return persona
-
-# Example function to fetch personas
-async def get_personas(request):
-    return JSONResponse(content=personas)
-
-# Handler to add a new persona
-async def add_persona(request):
-    data = await request.json()
-    data["_id"] = str(len(personas) + 1)  # Generate a simple unique ID
-    personas.append(data)
-    print(personas)
-    return JSONResponse({"message": "Persona added", "id": data["_id"]})
-
-# Handler to delete persona
-async def delete_persona(request: Request):
-    persona_id = request.path_params.get("persona_id")
-    global personas
-    new_personas = [p for p in personas if p["_id"] != persona_id]
-    
-    if len(new_personas) == len(personas):
-        return JSONResponse({"error": "Persona not found"}, status_code=404)
-    
-    personas = new_personas
-    return JSONResponse({"message": "Persona deleted successfully"})
-
-# Handler to update persona
-async def update_persona(request: Request):
-    persona_id = request.path_params.get("persona_id")
-    update_data = await request.json()
-    
-    for index, persona in enumerate(personas):
-        if persona["_id"] == persona_id:
-            personas[index].update(update_data)
-            return JSONResponse({"message": "Persona updated successfully"})
-    
-    return JSONResponse({"error": "Persona not found"}, status_code=404)

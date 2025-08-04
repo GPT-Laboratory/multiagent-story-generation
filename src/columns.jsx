@@ -9,13 +9,13 @@ export const columns = [
     render: (text, record, index) => index + 1, // Renders the row number
   },
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
     width: 400,
   },
   {
-    title: "User Stories",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
     width: 700,
@@ -33,10 +33,10 @@ export const columns = [
     width: 200,
   },
   {
-    title: "Status",
+    title: "modification",
     dataIndex: "status",
     key: "status",
-    width: 90,
+    width: 130,
   },
 
 ];
@@ -50,13 +50,13 @@ export const frameworkColumns = [
     render: (text, record, index) => index + 1, // Renders the row number
   },
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
     width: 400,
   },
   {
-    title: "User Stories",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
     width: 700,
@@ -104,13 +104,13 @@ export const prioritizedColumns = [
     width: 80,
   },
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
     width: 500,
   },
   {
-    title: "User Stories",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
     width: 700,
@@ -119,12 +119,12 @@ export const prioritizedColumns = [
 
 export const finalOutputColumns = [
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
   },
   {
-    title: "User Story",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
   },
@@ -158,12 +158,12 @@ export const finalOutputColumns = [
 
 export const wsjfColumns = [
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
   },
   {
-    title: "User Story",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
   },
@@ -199,6 +199,55 @@ export const wsjfColumns = [
   },
 ];
 
+export const wsmColumns = [
+  {
+    title: "Category",
+    dataIndex: "epic",
+    key: "epic",
+  },
+  {
+    title: "Requirement",
+    dataIndex: "user_story",
+    key: "user_story",
+  },
+  {
+    title: "Description",
+    dataIndex: "description",
+    key: "description",
+  },
+  {
+    title: "Business Value (BV)",
+    dataIndex: "bv",
+    key: "BV",
+  },
+  {
+    title: "Feasibility (F)",
+    dataIndex: "rc",
+    key: "F",
+  },
+  {
+    title: "Strategic Alignment (SA)",
+    dataIndex: "sa",
+    key: "SA",
+  },
+  {
+    title: "Risk & Compliance (RC)",
+    dataIndex: "rc",
+    key: "RC",
+  },
+  {
+    title: "Scalability (S)",
+    dataIndex: "s",
+    key: "S",
+  },
+  {
+    title: "WSM Score",
+    dataIndex: "wsm_score",
+    key: "wsm_score",
+  },
+];
+
+
 // Define columns for MoSCoW prioritization
 export const moscowColumns = [
   {
@@ -209,13 +258,13 @@ export const moscowColumns = [
     render: (text, record, index) => index + 1, // Renders the row number
   },
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
     width: 500,
   },
   {
-    title: "User Stories",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
     width: 700,
@@ -264,13 +313,13 @@ export const kanoColumns = [
     render: (text, record, index) => index + 1, // Renders the row number
   },
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
     width: 500,
   },
   {
-    title: "User Stories",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
     width: 700,
@@ -313,12 +362,12 @@ export const kanoColumns = [
 
 export const ahpColumns = [
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
   },
   {
-    title: "User Story",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
   },
@@ -383,19 +432,19 @@ export const testCasesColumns = [
 
 export const bestPOStoriesColumns = [
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
   },
   {
-    title: "User Story",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
   },
   {
     title: "Priority Points",
-    dataIndex: "priority_points",
-    key: "priority_points"
+    dataIndex: "dollar_allocation",
+    key: "dollar_allocation"
   },
   {
     title: "Description",
@@ -406,12 +455,12 @@ export const bestPOStoriesColumns = [
 
 export const bestSAStoriesColumns = [
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
   },
   {
-    title: "User Story",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
   },
@@ -429,12 +478,12 @@ export const bestSAStoriesColumns = [
 
 export const bestDevStoriesColumns = [
   {
-    title: "Epic",
+    title: "Category",
     dataIndex: "epic",
     key: "epic",
   },
   {
-    title: "User Story",
+    title: "Requirement",
     dataIndex: "user_story",
     key: "user_story",
   },
