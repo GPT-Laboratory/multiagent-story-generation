@@ -148,5 +148,5 @@ Limit MongoDB network access with IP allow-list or VPC peering.
 YouTube: 
 ## Demo Video
 
-[![Watch the video](https://img.youtube.com/vi/GYUtrQKKvxU/maxresdefault.jpg)](https://youtu.be/GYUtrQKKvxU)
+[![Watch the video](https://img.youtube.com/vi/GYUtrQKKvxU/hqdefault.jpg)](https://youtu.be/GYUtrQKKvxU)
 
